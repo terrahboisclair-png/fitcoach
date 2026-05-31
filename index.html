@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FitCoach</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root{--bg:#F7F5F2;--surface:#fff;--surface2:#F0EDE8;--border:#E2DDD7;--accent:#C8F04E;--accent2:#1A1A1A;--text:#1A1A1A;--text2:#6B6560;--text3:#9E9790;--danger:#E84545;--success:#2ECC71;--radius:12px;--radius-sm:8px;--font-display:'Bebas Neue',sans-serif;--font-body:'DM Sans',sans-serif;}
     *{box-sizing:border-box;margin:0;padding:0;}
@@ -97,6 +98,7 @@
     .login-card{background:var(--surface);border-radius:var(--radius);padding:40px;width:100%;max-width:400px;text-align:center;}
     .login-logo{font-family:var(--font-display);font-size:36px;letter-spacing:3px;color:var(--accent2);}
     .login-logo span{color:var(--accent);}
+    .loading{min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-size:24px;letter-spacing:2px;color:var(--text3);}
     svg.spark{width:100%;overflow:visible;}
     ::-webkit-scrollbar{width:6px;}
     ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
@@ -104,397 +106,58 @@
   </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app"><div class="loading">FITCOACH</div></div>
 <script>
-// ── Data ──────────────────────────────────────────────────────────────────────
-const KEY = "fitcoach_v1";
-const DEMO = {
-  clients:[
-    {id:"c1",name:"Alex Johnson",email:"alex@email.com",goal:"Muscle Gain",joined:"2024-01-15",token:"tok_alexj"},
-    {id:"c2",name:"Sarah Williams",email:"sarah@email.com",goal:"Weight Loss",joined:"2024-02-01",token:"tok_sarahw"},
-    {id:"c3",name:"Mike Torres",email:"mike@email.com",goal:"Athletic Performance",joined:"2024-03-10",token:"tok_miket"},
-  ],
-  workouts:{},logs:{},evolt:{}
-};
-function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):JSON.parse(JSON.stringify(DEMO));}catch{return JSON.parse(JSON.stringify(DEMO));}}
-function save(d){try{localStorage.setItem(KEY,JSON.stringify(d));}catch{}}
+const SUPABASE_URL="https://lvscijejongxoklwdbko.supabase.co";
+const SUPABASE_KEY="sb_publishable_KK-9Sj1ktTcTPQ3VNl_FRQ_-Mriqax-";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 function genToken(n){return"tok_"+n.toLowerCase().replace(/\s+/g,"").slice(0,8)+Math.random().toString(36).slice(2,6);}
-function ini(n){return n.split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();}
+function ini(n){return(n||"?").split(" ").map(x=>x[0]).join("").slice(0,2).toUpperCase();}
 function today(){return new Date().toISOString().slice(0,10);}
-
-let DB = load();
-let state = { view:"trainer", selClient:null, tab:"workouts", modal:null };
-const params = new URLSearchParams(location.search);
-const CLIENT_TOKEN = params.get("client");
-
-// ── Render ────────────────────────────────────────────────────────────────────
-function render(){
-  const app = document.getElementById("app");
-  if(CLIENT_TOKEN){
-    const client = DB.clients.find(c=>c.token===CLIENT_TOKEN);
-    if(!client){ app.innerHTML = loginError(); return; }
-    app.innerHTML = clientApp(client);
-  } else {
-    app.innerHTML = trainerApp();
-  }
-  attachEvents();
+const params=new URLSearchParams(location.search);
+const CLIENT_TOKEN=params.get("client");
+let state={view:"trainer",selClient:null,tab:"workouts",modal:null};
+let DB={clients:[],workouts:{},logs:{},evolt:{}};
+async function loadAll(){
+  const[c,w,l,e]=await Promise.all([sb.from("clients").select("*").order("created_at"),sb.from("workouts").select("*").order("created_at"),sb.from("logs").select("*").order("date"),sb.from("evolt").select("*").order("date")]);
+  DB.clients=c.data||[];
+  DB.workouts={};(w.data||[]).forEach(x=>{if(!DB.workouts[x.client_id])DB.workouts[x.client_id]=[];DB.workouts[x.client_id].push({...x,exercises:x.exercises||[]});});
+  DB.logs={};(l.data||[]).forEach(x=>{if(!DB.logs[x.client_id])DB.logs[x.client_id]={};if(!DB.logs[x.client_id][x.workout_id])DB.logs[x.client_id][x.workout_id]=[];DB.logs[x.client_id][x.workout_id].push(x);});
+  DB.evolt={};(e.data||[]).forEach(x=>{if(!DB.evolt[x.client_id])DB.evolt[x.client_id]=[];DB.evolt[x.client_id].push(x);});
 }
-
-function trainerApp(){
-  const client = DB.clients.find(c=>c.id===state.selClient);
-  return `<div class="app">
-    <div class="topbar">
-      <div class="logo">FIT<span>COACH</span></div>
-      <div class="topbar-right">
-        <div class="view-toggle">
-          <button class="${state.view==='trainer'?'active':''}" onclick="setView('trainer')">Trainer</button>
-          <button class="${state.view==='preview'?'active':''}" onclick="setView('preview')">Preview</button>
-        </div>
-        <button class="btn btn-sm" style="background:rgba(200,240,78,0.15);color:var(--accent);border:none;font-family:var(--font-body);font-weight:600;border-radius:8px;cursor:pointer;" onclick="exportData()">↓ Export</button>
-      </div>
-    </div>
-    <div class="main">
-      <div class="sidebar"><div class="sidebar-inner">
-        <div class="sidebar-label">Clients (${DB.clients.length})</div>
-        ${DB.clients.map(c=>`
-          <div class="client-item ${c.id===state.selClient?'active':''}" onclick="selectClient('${c.id}')">
-            <div class="avatar">${ini(c.name)}</div>
-            <div><div class="cname">${c.name}</div><div class="cgoal">${c.goal}</div></div>
-          </div>`).join("")}
-        <button class="add-btn" onclick="openModal('addClient')">+ Add Client</button>
-      </div></div>
-      ${client ? clientDetail(client, true) : `<div class="no-client"><div class="no-client-icon">👈</div><div class="no-client-text">Select a Client</div></div>`}
-    </div>
-    ${state.modal ? renderModal() : ""}
-  </div>`;
-}
-
-function clientApp(client){
-  return `<div class="app">
-    <div class="topbar"><div class="logo">FIT<span>COACH</span></div></div>
-    <div class="main">${clientDetail(client, false)}</div>
-    ${state.modal ? renderModal() : ""}
-  </div>`;
-}
-
-function loginError(){
-  return `<div class="login-screen"><div class="login-card">
-    <div class="login-logo">FIT<span>COACH</span></div>
-    <p style="color:var(--text3);margin:12px 0 20px;">Your personal training portal</p>
-    <p style="color:var(--danger);font-size:14px;">⚠️ This link is invalid or expired.<br>Contact your trainer for a new link.</p>
-  </div></div>`;
-}
-
-function clientDetail(client, isTrainer){
-  const tabs = isTrainer
-    ? ["workouts","evolt","progress","access"]
-    : ["workouts","evolt","progress"];
-  const tabLabels = {workouts:"Workouts",evolt:"EVOLT",progress:"Progress",access:"Client Link"};
-  const workouts = DB.workouts[client.id]||[];
-  const logs = DB.logs[client.id]||{};
-  const totalSessions = Object.values(logs).reduce((a,v)=>a+v.length,0);
-
-  return `<div class="content">
-    <div class="hero">
-      <div class="hero-avatar">${ini(client.name)}</div>
-      <div style="flex:1">
-        <div class="hero-name">${client.name}</div>
-        <div class="hero-sub">${client.goal} · ${client.email} · ${totalSessions} sessions logged</div>
-      </div>
-      ${isTrainer ? `<button class="btn btn-primary btn-sm" onclick="openModal('addWorkout','${client.id}')">+ Workout</button>` : ""}
-    </div>
-    <div class="tabs">
-      ${tabs.map(t=>`<button class="tab-btn ${state.tab===t?'active':''}" onclick="setTab('${t}')">${tabLabels[t]}</button>`).join("")}
-    </div>
-    ${renderTab(client, isTrainer)}
-  </div>`;
-}
-
-function renderTab(client, isTrainer){
-  const workouts = DB.workouts[client.id]||[];
-  const logs = DB.logs[client.id]||{};
-  const evolt = DB.evolt[client.id]||[];
-
-  if(state.tab==="workouts"){
-    if(!workouts.length) return `<div class="empty"><div class="empty-icon">🏋️</div><div class="empty-title">No Workouts Yet</div><div class="empty-sub">${isTrainer?"Build the first workout plan.":"Your trainer hasn't added workouts yet."}</div>${isTrainer?`<br><button class="btn btn-primary" onclick="openModal('addWorkout','${client.id}')">+ Create Workout</button>`:""}</div>`;
-    return workouts.map(w=>workoutCard(w, logs, client.id, isTrainer)).join("");
-  }
-
-  if(state.tab==="evolt"){
-    return `<div class="card">${evoltPanel(client.id, evolt, isTrainer)}</div>`;
-  }
-
-  if(state.tab==="progress"){
-    const entries = Object.entries(logs);
-    if(!entries.length) return `<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">No Sessions Logged</div><div class="empty-sub">Completed workouts will appear here.</div></div>`;
-    return entries.map(([wid,wlogs])=>{
-      const w = workouts.find(x=>x.id===wid);
-      if(!w||!wlogs.length) return "";
-      return `<div class="card"><div class="card-title" style="margin-bottom:12px">${w.name}</div>
-        ${[...wlogs].reverse().map((entry,i)=>`
-          <div style="padding-bottom:10px;margin-bottom:10px;${i<wlogs.length-1?'border-bottom:1px solid var(--border)':''}">
-            <div style="font-size:12px;color:var(--text3);margin-bottom:6px;">📅 ${entry.date}</div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;">
-              ${Object.entries(entry.data).filter(([k])=>k.endsWith("_a")).map(([k,v])=>{
-                const idx=parseInt(k);
-                return`<span class="tag tag-yellow">${w.exercises[idx]?.name||"?"}: ${v}</span>`;
-              }).join("")}
-            </div>
-          </div>`).join("")}
-      </div>`;
-    }).join("");
-  }
-
-  if(state.tab==="access" && isTrainer){
-    const link = `${location.origin}${location.pathname}?client=${client.token}`;
-    return `<div class="card">
-      <div class="section-title">🔗 Client Access Link</div>
-      <p style="font-size:14px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Send this private link to <strong>${client.name}</strong>. They'll see only their own data.</p>
-      <div class="link-box">
-        <span class="link-text" id="client-link">${link}</span>
-        <button class="btn btn-primary btn-sm" onclick="copyLink('${link}')">Copy Link</button>
-      </div>
-      <p style="font-size:12px;color:var(--text3);margin-top:12px;">Each client has a unique token. To reset access, delete and re-add the client.</p>
-    </div>`;
-  }
-  return "";
-}
-
-function workoutCard(w, logs, clientId, isTrainer){
-  const todayLog = (logs[w.id]||[]).find(l=>l.date===today());
-  const pastLogs = (logs[w.id]||[]).filter(l=>l.date!==today()).slice(-3).reverse();
-  return `<div class="workout-card">
-    <div class="workout-header">
-      <div><div class="workout-title">${w.name}</div><div class="workout-meta">${w.day||""} · ${w.exercises.length} exercises</div></div>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <span id="saved-${w.id}" class="tag tag-green hidden">✓ Saved</span>
-        ${!isTrainer?`<button class="btn btn-primary btn-sm" onclick="logSession('${clientId}','${w.id}')">Log Session</button>`:""}
-        ${isTrainer?`<button class="btn btn-ghost btn-sm" onclick="openModal('editWorkout','${clientId}','${w.id}')">Edit</button><button class="btn btn-ghost btn-sm btn-danger" onclick="deleteWorkout('${clientId}','${w.id}')">Delete</button>`:""}
-      </div>
-    </div>
-    <div class="ex-row hdr"><span>Exercise</span><span>Sets</span><span>Reps</span><span>Target</span><span>Actual</span></div>
-    ${w.exercises.map((ex,i)=>`<div class="ex-row">
-      <span class="ex-name">${ex.name}</span>
-      <span style="text-align:center;color:var(--text2)">${ex.sets}</span>
-      <span style="text-align:center;color:var(--text2)">${ex.reps}</span>
-      <span style="text-align:center;color:var(--text2)">${ex.weight}</span>
-      ${isTrainer?`<span style="text-align:center;color:var(--text3);font-size:12px">—</span>`:`<input class="log-input ${todayLog?.data?.[i+'_a']?'logged':''}" data-wid="${w.id}" data-idx="${i}" placeholder="kg×reps" value="${todayLog?.data?.[i+'_a']||''}" oninput="updateLog(this)">`}
-    </div>`).join("")}
-    ${pastLogs.length?`<div style="padding:12px 16px;background:var(--bg);border-top:1px solid var(--border)">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px">Recent Sessions</div>
-      ${pastLogs.map(l=>`<div style="font-size:12px;color:var(--text2);margin-bottom:4px"><strong>${l.date}:</strong> ${Object.entries(l.data).filter(([k])=>k.endsWith("_a")).map(([k,v])=>`${w.exercises[parseInt(k)]?.name}: ${v}`).join(" · ")}</div>`).join("")}
-    </div>`:""}
-  </div>`;
-}
-
-function evoltPanel(clientId, entries, isTrainer){
-  const latest = entries[entries.length-1], prev = entries[entries.length-2];
-  const fields = [{k:"bodyFat",l:"Body Fat",u:"%"},{k:"muscleMass",l:"Muscle Mass",u:"kg"},{k:"bmi",l:"BMI",u:""},{k:"hydration",l:"Hydration",u:"%"},{k:"visceralFat",l:"Visceral Fat",u:""},{k:"weight",l:"Weight",u:"kg"}];
-  function d(k){if(!latest||!prev||!latest[k]||!prev[k])return null;return parseFloat(latest[k])-parseFloat(prev[k]);}
-  function goodDown(k){return["bodyFat","visceralFat"].includes(k);}
-
-  const spark = (arr, color) => {
-    if(arr.length<2) return `<div style="height:70px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px">Not enough data</div>`;
-    const w=300,h=70,min=Math.min(...arr),max=Math.max(...arr),range=max-min||1;
-    const pts=arr.map((v,i)=>{const x=(i/(arr.length-1))*w,y=h-((v-min)/range)*(h-10)-5;return`${x},${y}`;}).join(" ");
-    const dots=arr.map((v,i)=>{const x=(i/(arr.length-1))*w,y=h-((v-min)/range)*(h-10)-5;return`<circle cx="${x}" cy="${y}" r="3" fill="${color}"/>`;}).join("");
-    return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:70px"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
-  };
-
-  return `
-    <div class="card-header">
-      <div class="section-title">⚡ EVOLT Data</div>
-      <button class="btn btn-dark btn-sm" onclick="openModal('addEvolt','${clientId}')">+ Add Scan</button>
-    </div>
-    ${latest?`<div class="stats-grid">${fields.map(f=>{const dv=d(f.k);const cls=dv===null?"":(goodDown(f.k)?(dv<0?"pos":"neg"):(dv>0?"pos":"neg"));return`<div class="stat-card"><div class="stat-value">${latest[f.k]||"—"}<span style="font-size:13px">${f.u}</span></div><div class="stat-label">${f.l}</div>${dv!==null?`<div class="stat-change ${cls}">${dv>0?"▲":"▼"} ${Math.abs(dv).toFixed(1)}${f.u}</div>`:""}</div>`;}).join("")}</div>`:""}
-    ${entries.length>1?`<div class="card" style="margin-top:16px">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:8px">Body Fat % Trend</div>
-      ${spark(entries.map(e=>parseFloat(e.bodyFat)).filter(Boolean),"#C8F04E")}
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin:12px 0 8px">Muscle Mass Trend</div>
-      ${spark(entries.map(e=>parseFloat(e.muscleMass)).filter(Boolean),"#1A1A1A")}
-    </div>`:""}
-    ${!entries.length?`<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">No Scans Yet</div><div class="empty-sub">Add the first EVOLT scan to start tracking.</div></div>`:""}
-    ${entries.length?`<div class="card" style="margin-top:16px">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:12px">Scan History</div>
-      ${[...entries].reverse().map((e,i)=>`<div style="padding:10px 0;${i<entries.length-1?'border-bottom:1px solid var(--border)':''}font-size:13px"><div style="font-weight:600;color:var(--text2);margin-bottom:4px">${e.date}</div><div style="display:flex;flex-wrap:wrap;gap:12px">${fields.map(f=>e[f.k]?`<span><span style="color:var(--text3)">${f.l}: </span>${e[f.k]}${f.u}</span>`:"").join("")}</div></div>`).join("")}
-    </div>`:""}`;
-}
-
-// ── Modals ────────────────────────────────────────────────────────────────────
-function renderModal(){
-  const m = state.modal;
-  if(m.type==="addClient") return addClientModal();
-  if(m.type==="addWorkout"||m.type==="editWorkout") return workoutBuilderModal(m);
-  if(m.type==="addEvolt") return evoltModal(m.clientId);
-  return "";
-}
-
-function addClientModal(){
-  const goals=["General Fitness","Muscle Gain","Weight Loss","Athletic Performance","Mobility","Endurance"];
-  return `<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-title">Add New Client</div>
-    <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="m-name" placeholder="Jane Smith"></div>
-    <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="m-email" type="email" placeholder="jane@email.com"></div>
-    <div class="form-group"><label class="form-label">Goal</label><select class="form-input" id="m-goal">${goals.map(g=>`<option>${g}</option>`).join("")}</select></div>
-    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveClient()">Add Client</button></div>
-  </div></div>`;
-}
-
-function workoutBuilderModal(m){
-  const existing = m.type==="editWorkout" ? (DB.workouts[m.clientId]||[]).find(w=>w.id===m.workoutId) : null;
-  const exes = existing?.exercises || [{name:"",sets:"",reps:"",weight:"",rest:""}];
-  return `<div class="overlay" onclick="closeModal()"><div class="modal" style="max-width:700px" onclick="event.stopPropagation()">
-    <div class="modal-title">${existing?"Edit Workout":"New Workout"}</div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Workout Name</label><input class="form-input" id="w-name" placeholder="Upper Body A" value="${existing?.name||""}"></div>
-      <div class="form-group"><label class="form-label">Day / Label</label><input class="form-input" id="w-day" placeholder="Monday / Day 1" value="${existing?.day||""}"></div>
-    </div>
-    <div class="divider"></div>
-    <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 36px;gap:8px;margin-bottom:6px">
-      ${["Exercise","Sets","Reps","Weight","Rest(s)",""].map(h=>`<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3)">${h}</div>`).join("")}
-    </div>
-    <div id="ex-list">
-      ${exes.map((ex,i)=>exRow(ex,i)).join("")}
-    </div>
-    <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="addExRow()">+ Add Exercise</button>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveWorkout('${m.clientId}','${existing?.id||""}')">Save Workout</button>
-    </div>
-  </div></div>`;
-}
-
-function exRow(ex,i){
-  return `<div class="ex-builder" id="ex-${i}">
-    <input class="form-input" placeholder="Exercise name" value="${ex.name||""}" data-field="name">
-    <input class="form-input" placeholder="4" style="text-align:center" value="${ex.sets||""}" data-field="sets">
-    <input class="form-input" placeholder="10" style="text-align:center" value="${ex.reps||""}" data-field="reps">
-    <input class="form-input" placeholder="kg" style="text-align:center" value="${ex.weight||""}" data-field="weight">
-    <input class="form-input" placeholder="60" style="text-align:center" value="${ex.rest||""}" data-field="rest">
-    <button onclick="removeExRow(${i})" style="width:32px;height:32px;border:none;background:var(--surface2);border-radius:6px;cursor:pointer;color:var(--danger);font-weight:700;font-size:16px">×</button>
-  </div>`;
-}
-
-function evoltModal(clientId){
-  const fields=[{k:"bodyFat",l:"Body Fat",u:"%"},{k:"muscleMass",l:"Muscle Mass",u:"kg"},{k:"bmi",l:"BMI",u:""},{k:"hydration",l:"Hydration",u:"%"},{k:"visceralFat",l:"Visceral Fat",u:""},{k:"weight",l:"Weight",u:"kg"}];
-  return `<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-title">Add EVOLT Scan</div>
-    <div class="form-group"><label class="form-label">Scan Date</label><input type="date" class="form-input" id="ev-date" value="${today()}"></div>
-    <div class="evolt-grid">
-      ${fields.map(f=>`<div class="form-group"><label class="form-label">${f.l}${f.u?" ("+f.u+")":""}</label><input type="number" step="0.1" class="form-input" id="ev-${f.k}" placeholder="0.0"></div>`).join("")}
-    </div>
-    <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveEvolt('${clientId}')">Save Scan</button></div>
-  </div></div>`;
-}
-
-// ── Actions ───────────────────────────────────────────────────────────────────
+async function addClient(name,email,goal){const token=genToken(name);const{data,error}=await sb.from("clients").insert({name,email,goal,token}).select().single();if(error){alert("Error: "+error.message);return null;}DB.clients.push(data);return data;}
+async function addWorkout(cid,name,day,exercises){const{data,error}=await sb.from("workouts").insert({client_id:cid,name,day,exercises}).select().single();if(error){alert("Error: "+error.message);return null;}if(!DB.workouts[cid])DB.workouts[cid]=[];DB.workouts[cid].push(data);return data;}
+async function updateWorkout(id,cid,name,day,exercises){const{data,error}=await sb.from("workouts").update({name,day,exercises}).eq("id",id).select().single();if(error){alert("Error: "+error.message);return;}DB.workouts[cid]=DB.workouts[cid].map(w=>w.id===id?data:w);}
+async function deleteWorkout(id,cid){await sb.from("workouts").delete().eq("id",id);DB.workouts[cid]=(DB.workouts[cid]||[]).filter(w=>w.id!==id);}
+async function saveLog(cid,wid,logData){const td=today();const existing=(DB.logs[cid]?.[wid]||[]).find(l=>l.date===td);if(existing){await sb.from("logs").update({data:logData}).eq("id",existing.id);existing.data=logData;}else{const{data}=await sb.from("logs").insert({client_id:cid,workout_id:wid,date:td,data:logData}).select().single();if(!DB.logs[cid])DB.logs[cid]={};if(!DB.logs[cid][wid])DB.logs[cid][wid]=[];DB.logs[cid][wid].push(data);}}
+async function saveEvolt(cid,entry){const{data,error}=await sb.from("evolt").insert({client_id:cid,...entry}).select().single();if(error){alert("Error: "+error.message);return;}if(!DB.evolt[cid])DB.evolt[cid]=[];DB.evolt[cid].push(data);}
+function render(){const app=document.getElementById("app");if(CLIENT_TOKEN){const client=DB.clients.find(c=>c.token===CLIENT_TOKEN);if(!client){app.innerHTML='<div class="login-screen"><div class="login-card"><div class="login-logo">FIT<span>COACH</span></div><p style="color:var(--text3);margin:12px 0 20px;">Your personal training portal</p><p style="color:var(--danger);font-size:14px;">This link is invalid or expired. Contact your trainer.</p></div></div>';return;}app.innerHTML=clientApp(client);}else{app.innerHTML=trainerApp();}}
+function trainerApp(){const client=DB.clients.find(c=>c.id===state.selClient);return`<div class="app"><div class="topbar"><div class="logo">FIT<span>COACH</span></div><div class="topbar-right"><div class="view-toggle"><button class="${state.view==='trainer'?'active':''}" onclick="setView('trainer')">Trainer</button><button class="${state.view==='preview'?'active':''}" onclick="setView('preview')">Preview</button></div><button style="padding:6px 14px;font-size:13px;font-family:var(--font-body);font-weight:600;border:none;background:rgba(200,240,78,0.15);color:var(--accent);border-radius:8px;cursor:pointer;" onclick="exportData()">&#8595; Export</button></div></div><div class="main"><div class="sidebar"><div class="sidebar-inner"><div class="sidebar-label">Clients (${DB.clients.length})</div>${DB.clients.map(c=>`<div class="client-item ${c.id===state.selClient?'active':''}" onclick="selectClient('${c.id}')"><div class="avatar">${ini(c.name)}</div><div><div class="cname">${c.name}</div><div class="cgoal">${c.goal}</div></div></div>`).join("")}<button class="add-btn" onclick="openModal('addClient')">+ Add Client</button></div></div>${client?clientDetail(client,true):'<div class="no-client"><div class="no-client-icon">&#128072;</div><div class="no-client-text">Select a Client</div></div>'}</div>${state.modal?renderModal():""}</div>`;}
+function clientApp(client){return`<div class="app"><div class="topbar"><div class="logo">FIT<span>COACH</span></div></div><div class="main">${clientDetail(client,false)}</div>${state.modal?renderModal():""}</div>`;}
+function clientDetail(client,isTrainer){const tabs=isTrainer?["workouts","evolt","progress","access"]:["workouts","evolt","progress"];const labels={workouts:"Workouts",evolt:"EVOLT",progress:"Progress",access:"Client Link"};const logs=DB.logs[client.id]||{};const total=Object.values(logs).reduce((a,v)=>a+v.length,0);return`<div class="content"><div class="hero"><div class="hero-avatar">${ini(client.name)}</div><div style="flex:1"><div class="hero-name">${client.name}</div><div class="hero-sub">${client.goal} · ${client.email} · ${total} sessions logged</div></div>${isTrainer?`<button class="btn btn-primary btn-sm" onclick="openModal('addWorkout','${client.id}')">+ Workout</button>`:""}</div><div class="tabs">${tabs.map(t=>`<button class="tab-btn ${state.tab===t?'active':''}" onclick="setTab('${t}')">${labels[t]}</button>`).join("")}</div>${renderTab(client,isTrainer)}</div>`;}
+function renderTab(client,isTrainer){const workouts=DB.workouts[client.id]||[];const logs=DB.logs[client.id]||{};const evolt=DB.evolt[client.id]||[];if(state.tab==="workouts"){if(!workouts.length)return`<div class="empty"><div class="empty-icon">&#127947;</div><div class="empty-title">No Workouts Yet</div><div class="empty-sub">${isTrainer?"Build the first workout plan.":"Your trainer hasn't added workouts yet."}</div>${isTrainer?`<br><button class="btn btn-primary" style="margin-top:16px" onclick="openModal('addWorkout','${client.id}')">+ Create Workout</button>`:""}</div>`;return workouts.map(w=>workoutCard(w,logs,client.id,isTrainer)).join("");}if(state.tab==="evolt"){return`<div class="card">${evoltPanel(client.id,evolt)}</div>`;}if(state.tab==="progress"){const entries=Object.entries(logs);if(!entries.length)return`<div class="empty"><div class="empty-icon">&#128197;</div><div class="empty-title">No Sessions Logged</div><div class="empty-sub">Completed workouts will appear here.</div></div>`;return entries.map(([wid,wlogs])=>{const w=workouts.find(x=>x.id===wid);if(!w||!wlogs.length)return"";return`<div class="card"><div class="card-title" style="margin-bottom:12px">${w.name}</div>${[...wlogs].reverse().map((entry,i)=>`<div style="padding-bottom:10px;margin-bottom:10px;${i<wlogs.length-1?'border-bottom:1px solid var(--border)':''}"><div style="font-size:12px;color:var(--text3);margin-bottom:6px;">&#128197; ${entry.date}</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${Object.entries(entry.data||{}).filter(([k])=>k.endsWith("_a")).map(([k,v])=>`<span class="tag tag-yellow">${w.exercises[parseInt(k)]?.name||"?"}: ${v}</span>`).join("")}</div></div>`).join("")}</div>`;}).join("");}if(state.tab==="access"&&isTrainer){const link=`${location.origin}${location.pathname}?client=${client.token}`;return`<div class="card"><div class="section-title">&#128279; Client Access Link</div><p style="font-size:14px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Send this private link to <strong>${client.name}</strong>. They will see only their own data from any device.</p><div class="link-box"><span class="link-text">${link}</span><button class="btn btn-primary btn-sm" onclick="copyLink('${link}')">Copy Link</button></div><p style="font-size:12px;color:var(--text3);margin-top:12px;">Data is stored in the cloud and works on any device.</p></div>`;}return"";}
+function workoutCard(w,logs,cid,isTrainer){const tl=(logs[w.id]||[]).find(l=>l.date===today());const pl=(logs[w.id]||[]).filter(l=>l.date!==today()).slice(-3).reverse();return`<div class="workout-card"><div class="workout-header"><div><div class="workout-title">${w.name}</div><div class="workout-meta">${w.day||""} · ${(w.exercises||[]).length} exercises</div></div><div style="display:flex;gap:8px;align-items:center;"><span id="saved-${w.id}" class="tag tag-green hidden">&#10003; Saved</span>${!isTrainer?`<button class="btn btn-primary btn-sm" onclick="logSession('${cid}','${w.id}')">Log Session</button>`:""}${isTrainer?`<button class="btn btn-ghost btn-sm" onclick="openModal('editWorkout','${cid}','${w.id}')">Edit</button><button class="btn btn-ghost btn-sm btn-danger" onclick="doDeleteWorkout('${w.id}','${cid}')">Delete</button>`:""}</div></div><div class="ex-row hdr"><span>Exercise</span><span>Sets</span><span>Reps</span><span>Target</span><span>Actual</span></div>${(w.exercises||[]).map((ex,i)=>`<div class="ex-row"><span class="ex-name">${ex.name}</span><span style="text-align:center;color:var(--text2)">${ex.sets}</span><span style="text-align:center;color:var(--text2)">${ex.reps}</span><span style="text-align:center;color:var(--text2)">${ex.weight}</span>${isTrainer?`<span style="text-align:center;color:var(--text3);font-size:12px">-</span>`:`<input class="log-input ${tl?.data?.[i+'_a']?'logged':''}" data-wid="${w.id}" data-idx="${i}" placeholder="kg x reps" value="${tl?.data?.[i+'_a']||''}">`}</div>`).join("")}${pl.length?`<div style="padding:12px 16px;background:var(--bg);border-top:1px solid var(--border)"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px">Recent Sessions</div>${pl.map(l=>`<div style="font-size:12px;color:var(--text2);margin-bottom:4px"><strong>${l.date}:</strong> ${Object.entries(l.data||{}).filter(([k])=>k.endsWith("_a")).map(([k,v])=>`${w.exercises[parseInt(k)]?.name}: ${v}`).join(" · ")}</div>`).join("")}</div>`:""}</div>`;}
+function evoltPanel(cid,entries){const latest=entries[entries.length-1],prev=entries[entries.length-2];const fields=[{k:"body_fat",l:"Body Fat",u:"%"},{k:"muscle_mass",l:"Muscle Mass",u:"kg"},{k:"bmi",l:"BMI",u:""},{k:"hydration",l:"Hydration",u:"%"},{k:"visceral_fat",l:"Visceral Fat",u:""},{k:"weight",l:"Weight",u:"kg"}];function d(k){if(!latest||!prev||!latest[k]||!prev[k])return null;return parseFloat(latest[k])-parseFloat(prev[k]);}function gd(k){return["body_fat","visceral_fat"].includes(k);}const spark=(arr,color)=>{if(arr.length<2)return`<div style="height:70px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px">Not enough data</div>`;const w=300,h=70,mn=Math.min(...arr),mx=Math.max(...arr),r=mx-mn||1;const pts=arr.map((v,i)=>{const x=(i/(arr.length-1))*w,y=h-((v-mn)/r)*(h-10)-5;return`${x},${y}`;}).join(" ");const dots=arr.map((v,i)=>{const x=(i/(arr.length-1))*w,y=h-((v-mn)/r)*(h-10)-5;return`<circle cx="${x}" cy="${y}" r="3" fill="${color}"/>`;}).join("");return`<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:70px"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;};return`<div class="card-header"><div class="section-title">EVOLT Data</div><button class="btn btn-dark btn-sm" onclick="openModal('addEvolt','${cid}')">+ Add Scan</button></div>${latest?`<div class="stats-grid">${fields.map(f=>{const dv=d(f.k);const cls=dv===null?"":(gd(f.k)?(dv<0?"pos":"neg"):(dv>0?"pos":"neg"));return`<div class="stat-card"><div class="stat-value">${latest[f.k]||"-"}<span style="font-size:13px">${f.u}</span></div><div class="stat-label">${f.l}</div>${dv!==null?`<div class="stat-change ${cls}">${dv>0?"up":"down"} ${Math.abs(dv).toFixed(1)}${f.u}</div>":""}</div>`;}).join("")}</div>`:""}${entries.length>1?`<div class="card" style="margin-top:16px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text2);margin-bottom:8px">Body Fat % Trend</div>${spark(entries.map(e=>parseFloat(e.body_fat)).filter(Boolean),"#C8F04E")}<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text2);margin:12px 0 8px">Muscle Mass Trend</div>${spark(entries.map(e=>parseFloat(e.muscle_mass)).filter(Boolean),"#1A1A1A")}</div>`:""}${!entries.length?`<div class="empty"><div class="empty-icon">&#128202;</div><div class="empty-title">No Scans Yet</div><div class="empty-sub">Add the first EVOLT scan to start tracking.</div></div>`:""}${entries.length?`<div class="card" style="margin-top:16px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--text2);margin-bottom:12px">Scan History</div>${[...entries].reverse().map((e,i)=>`<div style="padding:10px 0;${i<entries.length-1?'border-bottom:1px solid var(--border)':''}font-size:13px"><div style="font-weight:600;color:var(--text2);margin-bottom:4px">${e.date}</div><div style="display:flex;flex-wrap:wrap;gap:12px">${fields.map(f=>e[f.k]?`<span><span style="color:var(--text3)">${f.l}: </span>${e[f.k]}${f.u}</span>`:"").join("")}</div></div>`).join("")}</div>`:""}`;}
+function renderModal(){const m=state.modal;if(m.type==="addClient")return addClientModal();if(m.type==="addWorkout"||m.type==="editWorkout")return workoutBuilderModal(m);if(m.type==="addEvolt")return evoltModal(m.clientId);return"";}
+function addClientModal(){const goals=["General Fitness","Muscle Gain","Weight Loss","Athletic Performance","Mobility","Endurance"];return`<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()"><div class="modal-title">Add New Client</div><div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="m-name" placeholder="Jane Smith"></div><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="m-email" type="email" placeholder="jane@email.com"></div><div class="form-group"><label class="form-label">Goal</label><select class="form-input" id="m-goal">${goals.map(g=>`<option>${g}</option>`).join("")}</select></div><div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="doAddClient()">Add Client</button></div></div></div>`;}
+function workoutBuilderModal(m){const existing=m.type==="editWorkout"?(DB.workouts[m.clientId]||[]).find(w=>w.id===m.workoutId):null;const exes=existing?.exercises||[{name:"",sets:"",reps:"",weight:"",rest:""}];return`<div class="overlay" onclick="closeModal()"><div class="modal" style="max-width:700px" onclick="event.stopPropagation()"><div class="modal-title">${existing?"Edit Workout":"New Workout"}</div><div class="form-row"><div class="form-group"><label class="form-label">Workout Name</label><input class="form-input" id="w-name" placeholder="Upper Body A" value="${existing?.name||""}"></div><div class="form-group"><label class="form-label">Day / Label</label><input class="form-input" id="w-day" placeholder="Monday" value="${existing?.day||""}"></div></div><div class="divider"></div><div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 36px;gap:8px;margin-bottom:6px">${["Exercise","Sets","Reps","Weight","Rest(s)",""].map(h=>`<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:var(--text3)">${h}</div>`).join("")}</div><div id="ex-list">${exes.map((ex,i)=>exRow(ex,i)).join("")}</div><button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="addExRow()">+ Add Exercise</button><div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="doSaveWorkout('${m.clientId}','${existing?.id||""}')">Save Workout</button></div></div></div>`;}
+function exRow(ex,i){return`<div class="ex-builder" id="ex-${i}"><input class="form-input" placeholder="Exercise name" value="${ex.name||""}" data-field="name"><input class="form-input" placeholder="4" style="text-align:center" value="${ex.sets||""}" data-field="sets"><input class="form-input" placeholder="10" style="text-align:center" value="${ex.reps||""}" data-field="reps"><input class="form-input" placeholder="kg" style="text-align:center" value="${ex.weight||""}" data-field="weight"><input class="form-input" placeholder="60" style="text-align:center" value="${ex.rest||""}" data-field="rest"><button onclick="removeExRow(${i})" style="width:32px;height:32px;border:none;background:var(--surface2);border-radius:6px;cursor:pointer;color:var(--danger);font-weight:700;font-size:16px">x</button></div>`;}
+function evoltModal(cid){const fields=[{k:"body_fat",l:"Body Fat",u:"%"},{k:"muscle_mass",l:"Muscle Mass",u:"kg"},{k:"bmi",l:"BMI",u:""},{k:"hydration",l:"Hydration",u:"%"},{k:"visceral_fat",l:"Visceral Fat",u:""},{k:"weight",l:"Weight",u:"kg"}];return`<div class="overlay" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()"><div class="modal-title">Add EVOLT Scan</div><div class="form-group"><label class="form-label">Scan Date</label><input type="date" class="form-input" id="ev-date" value="${today()}"></div><div class="evolt-grid">${fields.map(f=>`<div class="form-group"><label class="form-label">${f.l}${f.u?" ("+f.u+")":""}</label><input type="number" step="0.1" class="form-input" id="ev-${f.k}" placeholder="0.0"></div>`).join("")}</div><div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="doSaveEvolt('${cid}')">Save Scan</button></div></div></div>`;}
 function setView(v){state.view=v;render();}
 function setTab(t){state.tab=t;render();}
 function selectClient(id){state.selClient=id;state.tab="workouts";render();}
 function openModal(type,a,b){state.modal={type,clientId:a,workoutId:b};render();}
 function closeModal(){state.modal=null;render();}
-
-function saveClient(){
-  const name=document.getElementById("m-name").value.trim();
-  if(!name)return;
-  const c={id:"c"+Date.now(),name,email:document.getElementById("m-email").value,goal:document.getElementById("m-goal").value,joined:today(),token:genToken(name)};
-  DB.clients.push(c);
-  save(DB);
-  state.selClient=c.id;
-  closeModal();
-}
-
-let logBuffer = {};
-function updateLog(el){
-  const wid=el.dataset.wid, idx=el.dataset.idx;
-  if(!logBuffer[wid])logBuffer[wid]={};
-  logBuffer[wid][idx+"_a"]=el.value;
-  if(el.value)el.classList.add("logged"); else el.classList.remove("logged");
-}
-
-function logSession(clientId, wid){
-  if(!DB.logs[clientId])DB.logs[clientId]={};
-  if(!DB.logs[clientId][wid])DB.logs[clientId][wid]=[];
-  const td=today();
-  const data = logBuffer[wid]||{};
-  // Also collect from DOM
-  document.querySelectorAll(`input[data-wid="${wid}"]`).forEach(el=>{
-    if(el.value)data[el.dataset.idx+"_a"]=el.value;
-  });
-  const existing=DB.logs[clientId][wid].findIndex(l=>l.date===td);
-  if(existing>=0)DB.logs[clientId][wid][existing]={date:td,data};
-  else DB.logs[clientId][wid].push({date:td,data});
-  save(DB);
-  const badge=document.getElementById("saved-"+wid);
-  if(badge){badge.classList.remove("hidden");setTimeout(()=>badge.classList.add("hidden"),2500);}
-}
-
-function saveWorkout(clientId, existingId){
-  const name=document.getElementById("w-name").value.trim();
-  if(!name)return;
-  const rows=document.querySelectorAll("#ex-list .ex-builder");
-  const exercises=[...rows].map(row=>({
-    name:row.querySelector("[data-field=name]").value,
-    sets:row.querySelector("[data-field=sets]").value,
-    reps:row.querySelector("[data-field=reps]").value,
-    weight:row.querySelector("[data-field=weight]").value,
-    rest:row.querySelector("[data-field=rest]").value,
-  })).filter(e=>e.name.trim());
-  if(!DB.workouts[clientId])DB.workouts[clientId]=[];
-  if(existingId){
-    DB.workouts[clientId]=DB.workouts[clientId].map(w=>w.id===existingId?{...w,name,day:document.getElementById("w-day").value,exercises}:w);
-  } else {
-    DB.workouts[clientId].push({id:"w"+Date.now(),name,day:document.getElementById("w-day").value,exercises});
-  }
-  save(DB);
-  closeModal();
-}
-
-function deleteWorkout(clientId, wid){
-  if(!confirm("Delete this workout?"))return;
-  DB.workouts[clientId]=(DB.workouts[clientId]||[]).filter(w=>w.id!==wid);
-  save(DB);render();
-}
-
-function addExRow(){
-  const list=document.getElementById("ex-list");
-  const idx=list.children.length;
-  list.insertAdjacentHTML("beforeend",exRow({},idx));
-}
-
-function removeExRow(i){
-  const el=document.getElementById("ex-"+i);
-  if(el)el.remove();
-}
-
-function saveEvolt(clientId){
-  const fields=["bodyFat","muscleMass","bmi","hydration","visceralFat","weight"];
-  const entry={id:Date.now().toString(),date:document.getElementById("ev-date").value};
-  fields.forEach(f=>{const v=document.getElementById("ev-"+f)?.value;if(v)entry[f]=v;});
-  if(!DB.evolt[clientId])DB.evolt[clientId]=[];
-  DB.evolt[clientId].push(entry);
-  save(DB);closeModal();
-}
-
-function copyLink(link){
-  navigator.clipboard.writeText(link).then(()=>{
-    const btn=document.querySelector(".link-box .btn");
-    if(btn){btn.textContent="✓ Copied!";setTimeout(()=>btn.textContent="Copy Link",2000);}
-  });
-}
-
-function exportData(){
-  const blob=new Blob([JSON.stringify({...DB,_exported:new Date().toISOString()},null,2)],{type:"application/json"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;a.download="fitcoach-backup-"+today()+".json";a.click();
-  URL.revokeObjectURL(url);
-}
-
-function attachEvents(){}
-
-// ── Boot ──────────────────────────────────────────────────────────────────────
-render();
+async function doAddClient(){const name=document.getElementById("m-name").value.trim();if(!name)return;const c=await addClient(name,document.getElementById("m-email").value,document.getElementById("m-goal").value);if(c){state.selClient=c.id;closeModal();}}
+async function logSession(cid,wid){const data={};document.querySelectorAll(`input[data-wid="${wid}"]`).forEach(el=>{if(el.value)data[el.dataset.idx+"_a"]=el.value;});await saveLog(cid,wid,data);const badge=document.getElementById("saved-"+wid);if(badge){badge.classList.remove("hidden");setTimeout(()=>badge.classList.add("hidden"),2500);}}
+async function doSaveWorkout(cid,eid){const name=document.getElementById("w-name").value.trim();if(!name)return;const rows=document.querySelectorAll("#ex-list .ex-builder");const exercises=[...rows].map(r=>({name:r.querySelector("[data-field=name]").value,sets:r.querySelector("[data-field=sets]").value,reps:r.querySelector("[data-field=reps]").value,weight:r.querySelector("[data-field=weight]").value,rest:r.querySelector("[data-field=rest]").value})).filter(e=>e.name.trim());const day=document.getElementById("w-day").value;if(eid){await updateWorkout(eid,cid,name,day,exercises);}else{await addWorkout(cid,name,day,exercises);}closeModal();}
+async function doDeleteWorkout(id,cid){if(!confirm("Delete this workout?"))return;await deleteWorkout(id,cid);render();}
+function addExRow(){const list=document.getElementById("ex-list");list.insertAdjacentHTML("beforeend",exRow({},list.children.length));}
+function removeExRow(i){const el=document.getElementById("ex-"+i);if(el)el.remove();}
+async function doSaveEvolt(cid){const fields=["body_fat","muscle_mass","bmi","hydration","visceral_fat","weight"];const entry={date:document.getElementById("ev-date").value};fields.forEach(f=>{const v=document.getElementById("ev-"+f)?.value;if(v)entry[f]=parseFloat(v);});await saveEvolt(cid,entry);closeModal();}
+function copyLink(link){navigator.clipboard.writeText(link).then(()=>{const btn=document.querySelector(".link-box .btn");if(btn){const orig=btn.textContent;btn.textContent="Copied!";setTimeout(()=>btn.textContent=orig,2000);}});}
+function exportData(){const blob=new Blob([JSON.stringify({...DB,_exported:new Date().toISOString()},null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="fitcoach-backup-"+today()+".json";a.click();URL.revokeObjectURL(url);}
+(async()=>{await loadAll();render();})();
 </script>
 </body>
 </html>
