@@ -34,8 +34,8 @@ body{font-family:var(--fb);background:var(--bg);color:var(--t);min-height:100vh;
 .ab{width:100%;padding:10px;border:2px dashed var(--bdr);border-radius:var(--rs);background:transparent;color:var(--t3);font-family:var(--fb);font-size:13px;cursor:pointer;margin-top:4px;}
 .ab:hover{border-color:var(--acc);color:var(--dk);}
 .con{flex:1;overflow-y:auto;padding:24px;}
-.tabs{display:flex;gap:4px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:4px;margin-bottom:24px;flex-wrap:wrap;width:fit-content;}
-.tb{padding:8px 14px;border:none;border-radius:var(--rs);background:transparent;font-family:var(--fb);font-size:13px;font-weight:500;color:var(--t2);cursor:pointer;}
+.tabs{display:flex;gap:4px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:4px;margin-bottom:24px;width:fit-content;}
+.tb{padding:8px 18px;border:none;border-radius:var(--rs);background:transparent;font-family:var(--fb);font-size:14px;font-weight:500;color:var(--t2);cursor:pointer;}
 .tb.on{background:var(--dk);color:#fff;}
 .card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:20px;margin-bottom:16px;}
 .ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
@@ -104,15 +104,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--t);min-height:100vh;
 .ll{font-family:var(--fd);font-size:36px;letter-spacing:3px;color:var(--dk);}
 .ll span{color:var(--acc);}
 .ld{min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:24px;letter-spacing:2px;color:var(--t3);}
-.str-table{width:100%;border-collapse:collapse;font-size:13px;}
-.str-table th{background:var(--dk);color:white;padding:8px 12px;text-align:center;font-family:var(--fd);letter-spacing:1px;font-size:12px;white-space:nowrap;}
-.str-table th:first-child{text-align:left;color:var(--acc);position:sticky;left:0;}
-.str-table td{padding:8px 12px;text-align:center;border-bottom:1px solid var(--bdr);}
-.str-table td:first-child{text-align:left;font-weight:600;position:sticky;left:0;background:var(--sur);border-right:1px solid var(--bdr);}
-.str-table tr:nth-child(even) td{background:var(--sur2);}
-.str-table tr:nth-child(even) td:first-child{background:var(--sur2);}
-.str-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--bdr);}
-::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar{width:6px;}
 ::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px;}
 @media(max-width:768px){.sb{width:190px;}.er{grid-template-columns:1fr 55px 55px 65px 75px;font-size:12px;}.sg{grid-template-columns:1fr 1fr;}.eg{grid-template-columns:1fr 1fr;}}
 </style>
@@ -152,8 +144,8 @@ function trainerApp(){
 }
 function clientApp(cl){return '<div class="app"><div class="bar"><div class="logo">FIT<span>COACH</span></div></div><div class="main">'+cDetail(cl,false)+'</div>'+(S.modal?rModal():'')+' </div>';}
 function cDetail(cl,isTr){
-  var tabs=isTr?["workouts","evolt","strength","progress","access"]:["workouts","evolt","strength","progress"];
-  var labels={workouts:"Workouts",evolt:"EVOLT",strength:"Strength",progress:"Progress",access:"Client Link"};
+  var tabs=isTr?["workouts","evolt","progress","access"]:["workouts","evolt","progress"];
+  var labels={workouts:"Workouts",evolt:"EVOLT",progress:"Progress",access:"Client Link"};
   var logs=DB.logs[cl.id]||{};
   var total=Object.values(logs).reduce(function(a,v){return a+v.length;},0);
   var tbHtml='<div class="tabs">';
@@ -170,36 +162,6 @@ function rTab(cl,isTr){
     return ww.map(function(w){return wCard(w,logs,cl.id,isTr);}).join('');
   }
   if(S.tab==="evolt"){return '<div class="card">'+ePanel(cl.id,evolt)+'</div>';}
-  if(S.tab==="strength"){
-    var exMap={};
-    ww.forEach(function(w){
-      (logs[w.id]||[]).forEach(function(entry){
-        Object.entries(entry.data||{}).filter(function(p){return p[0].endsWith('_a');}).forEach(function(p){
-          var idx=parseInt(p[0]);
-          var exName=w.exercises[idx]?w.exercises[idx].name:null;
-          if(!exName||!p[1])return;
-          if(!exMap[exName])exMap[exName]=[];
-          exMap[exName].push({date:entry.date,val:p[1]});
-        });
-      });
-    });
-    var exNames=Object.keys(exMap).sort();
-    if(!exNames.length)return '<div class="emp"><div class="ei">&#128170;</div><div class="et">No Strength Data Yet</div><div class="es">Log some sessions first to see weight progression here.</div></div>';
-    var allDates=[...new Set(exNames.reduce(function(a,n){return a.concat(exMap[n].map(function(e){return e.date;}));},[])) ].sort();
-    var html='<div class="card"><div class="ct" style="margin-bottom:16px">&#128170; Strength Tracker</div><div class="str-wrap"><table class="str-table"><thead><tr><th>Exercise</th>';
-    allDates.forEach(function(d){html+='<th>'+d+'</th>';});
-    html+='</tr></thead><tbody>';
-    exNames.forEach(function(name){
-      html+='<tr><td>'+name+'</td>';
-      allDates.forEach(function(d){
-        var entry=exMap[name].find(function(e){return e.date===d;});
-        html+='<td style="color:'+(entry?'var(--t)':'var(--t3)')+';">'+(entry?entry.val:'-')+'</td>';
-      });
-      html+='</tr>';
-    });
-    html+='</tbody></table></div></div>';
-    return html;
-  }
   if(S.tab==="progress"){
     var ents=Object.entries(logs);
     if(!ents.length)return '<div class="emp"><div class="ei">&#128197;</div><div class="et">No Sessions Logged</div><div class="es">Completed workouts will appear here.</div></div>';
