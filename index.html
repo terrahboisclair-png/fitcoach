@@ -141,8 +141,8 @@ function trainerApp(){
 }
 function clientApp(cl){return '<div class="app"><div class="bar"><div class="logo">FIT<span>COACH</span></div></div><div class="main">'+cDetail(cl,false)+'</div>'+(S.modal?rModal():'')+' </div>';}
 function cDetail(cl,isTr){
-  var tabs=isTr?["workouts","evolt","progress","access"]:["workouts","evolt","progress"];
-  var labels={workouts:"Workouts",evolt:"EVOLT",progress:"Progress",access:"Client Link"};
+  var tabs=isTr?["workouts","evolt","strength","progress","access"]:["workouts","evolt","strength","progress"];
+  var labels={workouts:"Workouts",evolt:"EVOLT",strength:"Strength",progress:"Progress",access:"Client Link"};
   var logs=DB.logs[cl.id]||{};
   var total=Object.values(logs).reduce(function(a,v){return a+v.length;},0);
   var tbHtml='<div class="tabs">';
@@ -159,6 +159,36 @@ function rTab(cl,isTr){
     return ww.map(function(w){return wCard(w,logs,cl.id,isTr);}).join('');
   }
   if(S.tab==="evolt"){return '<div class="card">'+ePanel(cl.id,evolt)+'</div>';}
+  if(S.tab==="strength"){
+    var exMap={};
+    ww.forEach(function(w){
+      (logs[w.id]||[]).forEach(function(entry){
+        Object.entries(entry.data||{}).filter(function(p){return p[0].endsWith('_a');}).forEach(function(p){
+          var idx=parseInt(p[0]);
+          var exName=w.exercises[idx]?w.exercises[idx].name:null;
+          if(!exName||!p[1])return;
+          if(!exMap[exName])exMap[exName]=[];
+          exMap[exName].push({date:entry.date,val:p[1]});
+        });
+      });
+    });
+    var exNames=Object.keys(exMap).sort();
+    if(!exNames.length)return '<div class="emp"><div class="ei">&#128170;</div><div class="et">No Strength Data Yet</div><div class="es">Log some sessions first to see weight progression here.</div></div>';
+    var allDates=[...new Set(exNames.reduce(function(a,n){return a.concat(exMap[n].map(function(e){return e.date;}));},[])) ].sort();
+    var rows='';
+    exNames.forEach(function(name,ri){
+      var bg=ri%2===0?'var(--sur)':'var(--sur2)';
+      var cells='';
+      allDates.forEach(function(d){
+        var entry=exMap[name].find(function(e){return e.date===d;});
+        cells+='<td style="padding:8px 12px;text-align:center;background:'+bg+';color:'+(entry?'var(--t)':'var(--t3)')+';">'+(entry?entry.val:'-')+'</td>';
+      });
+      rows+='<tr><td style="padding:8px 12px;font-weight:600;background:'+bg+';border-right:1px solid var(--bdr);">'+name+'</td>'+cells+'</tr>';
+    });
+    var hdrs='<th style="text-align:left;padding:8px 12px;background:var(--dk);color:var(--acc);font-family:var(--fd);letter-spacing:1px;">Exercise</th>';
+    allDates.forEach(function(d){hdrs+='<th style="padding:8px 12px;background:var(--dk);color:white;font-size:11px;font-weight:600;white-space:nowrap;text-align:center;">'+d+'</th>';});
+    return '<div class="card"><div class="ct" style="margin-bottom:16px">&#128170; Strength Tracker</div><div style="overflow-x:auto;border-radius:var(--r);border:1px solid var(--bdr);"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr>'+hdrs+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  }
   if(S.tab==="progress"){
     var ents=Object.entries(logs);
     if(!ents.length)return '<div class="emp"><div class="ei">&#128197;</div><div class="et">No Sessions Logged</div><div class="es">Completed workouts will appear here.</div></div>';
