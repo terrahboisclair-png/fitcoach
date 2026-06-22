@@ -141,8 +141,8 @@ function trainerApp(){
 }
 function clientApp(cl){return '<div class="app"><div class="bar"><div class="logo">FIT<span>COACH</span></div></div><div class="main">'+cDetail(cl,false)+'</div>'+(S.modal?rModal():'')+' </div>';}
 function cDetail(cl,isTr){
-  var tabs=isTr?["workouts","evolt","strength","progress","access"]:["workouts","evolt","strength","progress"];
-  var labels={workouts:"Workouts",evolt:"EVOLT",strength:"Strength",progress:"Progress",access:"Client Link"};
+  var tabs=isTr?["workouts","evolt","progress","access"]:["workouts","evolt","progress"];
+  var labels={workouts:"Workouts",evolt:"EVOLT",progress:"Progress",access:"Client Link"};
   var logs=DB.logs[cl.id]||{};
   var total=Object.values(logs).reduce(function(a,v){return a+v.length;},0);
   var tbHtml='<div class="tabs">';
@@ -159,37 +159,6 @@ function rTab(cl,isTr){
     return ww.map(function(w){return wCard(w,logs,cl.id,isTr);}).join('');
   }
   if(S.tab==="evolt"){return '<div class="card">'+ePanel(cl.id,evolt)+'</div>';}
-  if(S.tab==="strength"){
-    var exMap={};
-    ww.forEach(function(w){
-      (logs[w.id]||[]).forEach(function(entry){
-        Object.entries(entry.data||{}).filter(function(p){return p[0].endsWith('_a');}).forEach(function(p){
-          var idx=parseInt(p[0]);
-          var exName=w.exercises[idx]?w.exercises[idx].name:null;
-          if(!exName||!p[1])return;
-          if(!exMap[exName])exMap[exName]=[];
-          exMap[exName].push({date:entry.date,val:p[1]});
-        });
-      });
-    });
-    var exNames=Object.keys(exMap).sort();
-    if(!exNames.length)return '<div class="emp"><div class="ei">&#128170;</div><div class="et">No Strength Data Yet</div><div class="es">Log some sessions first to see weight progression here.</div></div>';
-    var allDates=[...new Set(exNames.reduce(function(a,n){return a.concat(exMap[n].map(function(e){return e.date;}));},[])) ].sort();
-    var html='<div class="card"><div class="ct" style="margin-bottom:16px">&#128170; Strength Tracker</div><div style="overflow-x:auto;border-radius:var(--r);border:1px solid var(--bdr)"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr><th style="text-align:left;padding:8px 12px;background:var(--dk);color:var(--acc);font-family:var(--fd);letter-spacing:1px;position:sticky;left:0;">Exercise</th>';
-    allDates.forEach(function(d){html+='<th style="padding:8px 12px;background:var(--dk);color:white;font-size:11px;font-weight:600;white-space:nowrap;text-align:center;">'+d+'</th>';});
-    html+='</tr></thead><tbody>';
-    exNames.forEach(function(name,ri){
-      var bg=ri%2===0?'var(--sur)':'var(--sur2)';
-      html+='<tr><td style="padding:8px 12px;font-weight:600;background:'+bg+';position:sticky;left:0;border-right:1px solid var(--bdr);">'+name+'</td>';
-      allDates.forEach(function(d){
-        var entry=exMap[name].find(function(e){return e.date===d;});
-        html+='<td style="padding:8px 12px;text-align:center;background:'+bg+';color:'+(entry?'var(--t)':'var(--t3)')+';">'+(entry?entry.val:'-')+'</td>';
-      });
-      html+='</tr>';
-    });
-    html+='</tbody></table></div></div>';
-    return html;
-  }
   if(S.tab==="progress"){
     var ents=Object.entries(logs);
     if(!ents.length)return '<div class="emp"><div class="ei">&#128197;</div><div class="et">No Sessions Logged</div><div class="es">Completed workouts will appear here.</div></div>';
@@ -285,40 +254,6 @@ function doSE(cid){var fields=["body_fat","muscle_mass","bmr","hydration","visce
 function cpLink(link){navigator.clipboard.writeText(link).then(function(){var btn=document.querySelector(".lb .btn");if(btn){var orig=btn.textContent;btn.textContent="Copied!";setTimeout(function(){btn.textContent=orig;},2000);}});}
 function expD(){var blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="fitcoach-"+td()+".json";a.click();URL.revokeObjectURL(url);}
 loadAll().then(function(){render();});
-<script>
-        const phases = {
-            strength: { protein: '1.0-1.2', carbs: '2.0-2.5', fat: '0.3-0.4' },
-            hypertrophy: { protein: '1.1-1.3', carbs: '2.5-3.0', fat: '0.4-0.5' },
-            conditioning: { protein: '1.0-1.2', carbs: '2.0-2.5', fat: '0.3-0.4' }
-        };
-        let currentPhase = 'strength';
-        function selectPhase(phase) {
-            currentPhase = phase;
-            document.querySelectorAll('.phase-button').forEach(btn => { btn.classList.remove('active'); });
-            event.target.closest('.phase-button').classList.add('active');
-            updateMacros();
-        }
-        function updateMacros() {
-            const bw = 160;
-            const p = phases[currentPhase];
-            const pMin = Math.round(bw * parseFloat(p.protein.split('-')[0]));
-            const pMax = Math.round(bw * parseFloat(p.protein.split('-')[1]));
-            const cMin = Math.round(bw * parseFloat(p.carbs.split('-')[0]));
-            const cMax = Math.round(bw * parseFloat(p.carbs.split('-')[1]));
-            const fMin = Math.round(bw * parseFloat(p.fat.split('-')[0]));
-            const fMax = Math.round(bw * parseFloat(p.fat.split('-')[1]));
-            document.getElementById('macro-protein').textContent = `${pMin}-${pMax}`;
-            document.getElementById('macro-carbs').textContent = `${cMin}-${cMax}`;
-            document.getElementById('macro-fat').textContent = `${fMin}-${fMax}`;
-        }
-        function showTab(index) {
-            const tabContents = document.querySelectorAll('.tab-content');
-            const tabButtons = document.querySelectorAll('.tab-button');
-            tabContents.forEach(content => content.style.display = 'none');
-            tabButtons.forEach(button => button.classList.remove('active'));
-            tabContents[index].style.display = 'block';
-            tabButtons[index].classList.add('active');
-        }
-    </script>
+</script>
 </body>
 </html>
