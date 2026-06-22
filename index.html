@@ -285,6 +285,40 @@ function doSE(cid){var fields=["body_fat","muscle_mass","bmr","hydration","visce
 function cpLink(link){navigator.clipboard.writeText(link).then(function(){var btn=document.querySelector(".lb .btn");if(btn){var orig=btn.textContent;btn.textContent="Copied!";setTimeout(function(){btn.textContent=orig;},2000);}});}
 function expD(){var blob=new Blob([JSON.stringify(DB,null,2)],{type:"application/json"});var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="fitcoach-"+td()+".json";a.click();URL.revokeObjectURL(url);}
 loadAll().then(function(){render();});
-</script>
+<script>
+        const phases = {
+            strength: { protein: '1.0-1.2', carbs: '2.0-2.5', fat: '0.3-0.4' },
+            hypertrophy: { protein: '1.1-1.3', carbs: '2.5-3.0', fat: '0.4-0.5' },
+            conditioning: { protein: '1.0-1.2', carbs: '2.0-2.5', fat: '0.3-0.4' }
+        };
+        let currentPhase = 'strength';
+        function selectPhase(phase) {
+            currentPhase = phase;
+            document.querySelectorAll('.phase-button').forEach(btn => { btn.classList.remove('active'); });
+            event.target.closest('.phase-button').classList.add('active');
+            updateMacros();
+        }
+        function updateMacros() {
+            const bw = 160;
+            const p = phases[currentPhase];
+            const pMin = Math.round(bw * parseFloat(p.protein.split('-')[0]));
+            const pMax = Math.round(bw * parseFloat(p.protein.split('-')[1]));
+            const cMin = Math.round(bw * parseFloat(p.carbs.split('-')[0]));
+            const cMax = Math.round(bw * parseFloat(p.carbs.split('-')[1]));
+            const fMin = Math.round(bw * parseFloat(p.fat.split('-')[0]));
+            const fMax = Math.round(bw * parseFloat(p.fat.split('-')[1]));
+            document.getElementById('macro-protein').textContent = `${pMin}-${pMax}`;
+            document.getElementById('macro-carbs').textContent = `${cMin}-${cMax}`;
+            document.getElementById('macro-fat').textContent = `${fMin}-${fMax}`;
+        }
+        function showTab(index) {
+            const tabContents = document.querySelectorAll('.tab-content');
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabContents.forEach(content => content.style.display = 'none');
+            tabButtons.forEach(button => button.classList.remove('active'));
+            tabContents[index].style.display = 'block';
+            tabButtons[index].classList.add('active');
+        }
+    </script>
 </body>
 </html>
