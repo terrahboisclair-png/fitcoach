@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -96,6 +95,14 @@ body{font-family:var(--fb);background:var(--bg);color:var(--t);min-height:100vh;
 .ebr{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 1.5fr 36px;gap:8px;align-items:center;margin-bottom:8px;}
 .lb{display:flex;align-items:center;gap:8px;background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--rs);padding:8px 12px;margin-top:6px;}
 .lt{font-size:12px;color:var(--t2);font-family:monospace;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.trl{display:flex;gap:5px;align-items:center;flex-shrink:0;}
+.td{width:10px;height:10px;border-radius:50%;border:1.5px solid var(--bdr);}
+.td.on{background:var(--acc);border-color:var(--acc);}
+.wkrow{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--rs);border:1px solid var(--bdr);margin-bottom:8px;}
+.wkrow.me{background:rgba(200,240,78,0.15);border-color:var(--acc);}
+.wkrow.off{opacity:0.55;}
+.wkn{font-size:14px;font-weight:600;flex:1;}
+.wkt{font-family:var(--fd);font-size:18px;color:var(--dk);min-width:70px;text-align:right;}
 .ls{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);}
 .lc{background:var(--sur);border-radius:var(--r);padding:40px;width:100%;max-width:400px;text-align:center;}
 .ll{font-family:var(--fd);font-size:36px;letter-spacing:3px;color:var(--dk);}
@@ -115,16 +122,18 @@ var sb=supabase.createClient(SB_URL,SB_KEY);
 var params=new URLSearchParams(location.search);
 var CT=params.get("client");
 var S={view:"trainer",sel:null,tab:"workouts",modal:null};
-var DB={clients:[],workouts:{},logs:{},evolt:{}};
+var DB={clients:[],workouts:{},logs:{},evolt:{},walkOptins:{},walkLogs:{}};
 function tok(n){return"tok_"+n.toLowerCase().replace(/\s+/g,"").slice(0,8)+Math.random().toString(36).slice(2,6);}
 function ini(n){return((n||"?").split(" ").map(function(x){return x[0];}).join("")).slice(0,2).toUpperCase();}
 function td(){return new Date().toISOString().slice(0,10);}
 function loadAll(){
-  return Promise.all([sb.from("clients").select("*").order("created_at"),sb.from("workouts").select("*").order("created_at"),sb.from("logs").select("*").order("date"),sb.from("evolt").select("*").order("date")]).then(function(res){
+  return Promise.all([sb.from("clients").select("*").order("created_at"),sb.from("workouts").select("*").order("created_at"),sb.from("logs").select("*").order("date"),sb.from("evolt").select("*").order("date"),sb.from("walk_optins").select("*"),sb.from("walk_logs").select("*").order("log_date")]).then(function(res){
     DB.clients=res[0].data||[];
     DB.workouts={};(res[1].data||[]).forEach(function(x){if(!DB.workouts[x.client_id])DB.workouts[x.client_id]=[];DB.workouts[x.client_id].push(x);});
     DB.logs={};(res[2].data||[]).forEach(function(x){if(!DB.logs[x.client_id])DB.logs[x.client_id]={};if(!DB.logs[x.client_id][x.workout_id])DB.logs[x.client_id][x.workout_id]=[];DB.logs[x.client_id][x.workout_id].push(x);});
     DB.evolt={};(res[3].data||[]).forEach(function(x){if(!DB.evolt[x.client_id])DB.evolt[x.client_id]=[];DB.evolt[x.client_id].push(x);});
+    DB.walkOptins={};(res[4].data||[]).forEach(function(x){DB.walkOptins[x.client_id]=x.opted_in;});
+    DB.walkLogs={};(res[5].data||[]).forEach(function(x){if(!DB.walkLogs[x.client_id])DB.walkLogs[x.client_id]={};DB.walkLogs[x.client_id][x.log_date]=x.steps;});
   });
 }
 function render(){
@@ -137,12 +146,12 @@ function trainerApp(){
   var sb2='<div class="sb"><div class="sbi"><div class="sbl">Clients ('+DB.clients.length+')</div>';
   DB.clients.forEach(function(c){sb2+='<div class="ci'+(c.id===S.sel?' on':'')+'" onclick="selC(\''+c.id+'\')"><div class="av">'+ini(c.name)+'</div><div><div class="cn">'+c.name+'</div><div class="cg">'+c.goal+'</div></div></div>';});
   sb2+='<button class="ab" onclick="openM(\'addClient\')">+ Add Client</button></div></div>';
-  return '<div class="app"><div class="bar"><div class="logo">FIT<span>COACH</span></div><div class="tr"><div class="vt"><button class="'+(S.view==="trainer"?"on":"")+'" onclick="setV(\'trainer\')">Trainer</button><button class="'+(S.view==="preview"?"on":"")+'" onclick="setV(\'preview\')">Preview</button></div><button onclick="expD()" style="padding:6px 14px;font-size:13px;font-family:var(--fb);font-weight:600;border:none;background:rgba(200,240,78,0.15);color:var(--acc);border-radius:8px;cursor:pointer;">&#8595; Export</button></div></div><div class="main">'+sb2+(cl?cDetail(cl,true):'<div class="nc"><div class="ni">&#128072;</div><div class="nt">Select a Client</div></div>')+'</div>'+(S.modal?rModal():'')+' </div>';
+  return '<div class="app"><div class="bar"><div class="logo">FIT<span>COACH</span></div><div class="tr"><div class="vt"><button class="'+(S.view==="trainer"?"on":"")+'" onclick="setV(\'trainer\')">Trainer</button><button class="'+(S.view==="preview"?"on":"")+'" onclick="setV(\'preview\')">Preview</button><button class="'+(S.view==="walk"?"on":"")+'" onclick="setV(\'walk\')">Team Walk</button></div><button onclick="expD()" style="padding:6px 14px;font-size:13px;font-family:var(--fb);font-weight:600;border:none;background:rgba(200,240,78,0.15);color:var(--acc);border-radius:8px;cursor:pointer;">&#8595; Export</button></div></div><div class="main">'+(S.view==="walk"?wkBoard():sb2+(cl?cDetail(cl,true):'<div class="nc"><div class="ni">&#128072;</div><div class="nt">Select a Client</div></div>'))+'</div>'+(S.modal?rModal():'')+' </div>';
 }
 function clientApp(cl){return '<div class="app"><div class="bar"><div class="logo">FIT<span>COACH</span></div></div><div class="main">'+cDetail(cl,false)+'</div>'+(S.modal?rModal():'')+' </div>';}
 function cDetail(cl,isTr){
-  var tabs=isTr?["workouts","evolt","strength","progress","access"]:["workouts","evolt","strength","progress"];
-  var labels={workouts:"Workouts",evolt:"EVOLT",strength:"Strength",progress:"Progress",access:"Client Link"};
+  var tabs=isTr?["workouts","evolt","strength","progress","walk","access"]:["workouts","evolt","strength","progress","walk"];
+  var labels={workouts:"Workouts",evolt:"EVOLT",strength:"Strength",progress:"Progress",walk:"Walk",access:"Client Link"};
   var logs=DB.logs[cl.id]||{};
   var total=Object.values(logs).reduce(function(a,v){return a+v.length;},0);
   var tbHtml='<div class="tabs">';
@@ -203,6 +212,7 @@ function rTab(cl,isTr){
       return '<div class="card"><div class="ct" style="margin-bottom:12px">'+w.name+'</div>'+rows+'</div>';
     }).join('');
   }
+  if(S.tab==="walk"){return wPanel(cl.id,isTr);}
   if(S.tab==="access"&&isTr){
     var link=location.origin+location.pathname+'?client='+cl.token;
     return '<div class="card"><div class="st">&#128279; Client Access Link</div><p style="font-size:14px;color:var(--t2);margin-bottom:16px;line-height:1.6;">Send this link to <strong>'+cl.name+'</strong>. They will see only their own data from any device.</p><div class="lb"><span class="lt">'+link+'</span><button class="btn bp bs" onclick="cpLink(\''+link+'\')">Copy Link</button></div><p style="font-size:12px;color:var(--t3);margin-top:12px;">Data is stored in the cloud and works on any device.</p></div>';
@@ -269,6 +279,45 @@ function eModal(cid){
   var fields=[{k:"body_fat",l:"Body Fat",u:"%"},{k:"muscle_mass",l:"Muscle Mass",u:"lbs"},{k:"bmr",l:"BMR",u:"kcal"},{k:"hydration",l:"Hydration",u:"%"},{k:"visceral_fat",l:"Visceral Fat",u:""},{k:"weight",l:"Weight",u:"lbs"}];
   return '<div class="ov" onclick="closeM()"><div class="mo" onclick="event.stopPropagation()"><div class="mt">Add EVOLT Scan</div><div class="fg"><label class="fl">Scan Date</label><input type="date" class="fi" id="ev_date" value="'+td()+'"></div><div class="eg">'+fields.map(function(f){return '<div class="fg"><label class="fl">'+f.l+(f.u?' ('+f.u+')':'')+'</label><input type="number" step="0.1" class="fi" id="ev_'+f.k+'" placeholder="0.0"></div>';}).join('')+'</div><div class="mf"><button class="btn bg" onclick="closeM()">Cancel</button><button class="btn bp" onclick="doSE(\''+cid+'\')">Save Scan</button></div></div></div>';
 }
+function last7(){var a=[];for(var i=6;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);a.push(d.toISOString().slice(0,10));}return a;}
+function wkTotal(log){return last7().reduce(function(s,d){return s+(log[d]||0);},0);}
+function wkDaysLogged(log){return last7().filter(function(d){return !!log[d];}).length;}
+function wkStreak(log){var days=last7();var s=0;for(var i=days.length-1;i>=0;i--){if(log[days[i]])s++;else break;}return s;}
+function wkLastLabel(log){var days=last7();var logged=days.filter(function(d){return !!log[d];});if(!logged.length)return "No logs yet";var last=logged[logged.length-1];if(last===td())return "Today";var y=new Date();y.setDate(y.getDate()-1);if(last===y.toISOString().slice(0,10))return "Yesterday";return new Date(last).toLocaleDateString(undefined,{weekday:"short"});}
+function wkTrail(log){var days=last7();return '<div class="trl">'+days.map(function(d){return '<span class="td'+(log[d]?' on':'')+'" title="'+d+'"></span>';}).join('')+'</div>';}
+function wPanel(cid,isTr){
+  var opted=!!DB.walkOptins[cid];
+  var log=DB.walkLogs[cid]||{};
+  if(!opted){
+    if(isTr){return '<div class="card"><div class="st">&#128694; Walk Challenge</div><p style="font-size:14px;color:var(--t2);line-height:1.6;">This client has not joined the walk challenge yet. They can opt in from their client link.</p></div>';}
+    return '<div class="card"><div class="st">&#128694; Walk Challenge</div><p style="font-size:14px;color:var(--t2);margin-bottom:16px;line-height:1.6;">A friendly weekly step count with the rest of the group. Join whenever you are ready, and leave anytime.</p><button class="btn bp" onclick="doWalkOptIn(\''+cid+'\',true)">Join the Challenge</button></div>';
+  }
+  var total=wkTotal(log),streak=wkStreak(log),days=wkDaysLogged(log);
+  var html='<div class="card"><div class="ch"><div class="st">&#128694; Your Week</div>'+(isTr?'':'<button class="btn bg bs" onclick="doWalkOptIn(\''+cid+'\',false)">Leave Challenge</button>')+'</div>'+wkTrail(log)+'<div class="sg" style="margin-top:16px"><div class="sc"><div class="sv">'+total.toLocaleString()+'</div><div class="sl">This Week</div></div><div class="sc"><div class="sv">'+days+'/7</div><div class="sl">Days Logged</div></div><div class="sc"><div class="sv">'+streak+'</div><div class="sl">Streak</div></div></div>'+(isTr?'':'<div style="display:flex;gap:8px;margin-top:16px"><input class="fi" id="wksteps" type="number" placeholder="Today\'s steps" style="flex:1"><button class="btn bp" onclick="doWalkLog(\''+cid+'\')">Log Steps</button></div>')+'</div>';
+  if(!isTr){
+    var ranked=DB.clients.filter(function(c){return !!DB.walkOptins[c.id];}).map(function(c){return{id:c.id,name:c.name,total:wkTotal(DB.walkLogs[c.id]||{}),log:DB.walkLogs[c.id]||{}};}).sort(function(a,b){return b.total-a.total;});
+    html+='<div class="card"><div class="st">Leaderboard</div>'+ranked.map(function(c,i){return '<div class="wkrow'+(c.id===cid?' me':'')+'"><span style="font-family:var(--fd);font-size:16px;color:var(--t3);width:22px">'+(i+1)+'</span><span class="wkn">'+c.name+(c.id===cid?' (you)':'')+'</span>'+wkTrail(c.log)+'<span class="wkt">'+c.total.toLocaleString()+'</span></div>';}).join('')+'</div>';
+  }
+  return html;
+}
+function wkBoard(){
+  var rows=DB.clients.map(function(c){
+    var log=DB.walkLogs[c.id]||{};
+    return{id:c.id,name:c.name,opted:!!DB.walkOptins[c.id],total:wkTotal(log),streak:wkStreak(log),days:wkDaysLogged(log),log:log,last:wkLastLabel(log)};
+  }).sort(function(a,b){if(a.opted!==b.opted)return a.opted?-1:1;return b.days-a.days||b.total-a.total;});
+  var optedCount=rows.filter(function(r){return r.opted;}).length;
+  var activeCount=rows.filter(function(r){return r.opted&&r.days>0;}).length;
+  var body=rows.map(function(r){
+    if(!r.opted)return '<div class="wkrow off"><span class="wkn">'+r.name+'</span><span style="font-size:13px;color:var(--t3)">Not opted in</span></div>';
+    var badges='';
+    if(r.streak>=3)badges+='<span class="tag ty">'+r.streak+' day streak</span> ';
+    if(r.days===0)badges+='<span class="tag" style="background:var(--sur2);color:var(--t3)">Not logging</span> ';
+    return '<div class="wkrow"><span class="wkn">'+r.name+'</span>'+wkTrail(r.log)+'<span style="font-size:12px;color:var(--t3);width:80px">'+r.last+'</span>'+badges+'<span class="wkt">'+r.total.toLocaleString()+'</span></div>';
+  }).join('');
+  return '<div class="con"><div class="card"><div class="st">&#128694; Team Walk Engagement</div><p style="font-size:13px;color:var(--t2);margin-bottom:16px">'+optedCount+' of '+rows.length+' clients opted in, '+activeCount+' logged at least once this week</p>'+body+'</div></div>';
+}
+function doWalkOptIn(cid,val){sb.from("walk_optins").upsert({client_id:cid,opted_in:val,updated_at:new Date().toISOString()}).then(function(r){if(r.error){alert(r.error.message);return;}DB.walkOptins[cid]=val;render();});}
+function doWalkLog(cid){var el=document.getElementById("wksteps");if(!el)return;var v=parseInt(el.value,10);if(!v||v<=0)return;var d=td();sb.from("walk_logs").upsert({client_id:cid,log_date:d,steps:v}).then(function(r){if(r.error){alert(r.error.message);return;}if(!DB.walkLogs[cid])DB.walkLogs[cid]={};DB.walkLogs[cid][d]=v;render();});}
 function setV(v){S.view=v;render();}
 function setT(t){S.tab=t;render();}
 function selC(id){S.sel=id;S.tab="workouts";render();}
