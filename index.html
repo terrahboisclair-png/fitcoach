@@ -179,7 +179,15 @@ function cDetail(cl,isTr){
   var tbHtml='<div class="tabs">';
   tabs.forEach(function(t){tbHtml+='<button class="tb'+(S.tab===t?' on':'')+'" onclick="setT(\''+t+'\')">'+labels[t]+'</button>';});
   tbHtml+='</div>';
-  return '<div class="con"><div class="hero"><div class="ha">'+ini(cl.name)+'</div><div style="flex:1"><div class="hn">'+cl.name+'</div><div class="hs">'+cl.goal+' &middot; '+cl.email+' &middot; '+total+' sessions logged</div></div>'+(isTr?'<button class="btn bp bs" onclick="openM(\'addWorkout\',\''+cl.id+'\')">+ Workout</button>':'')+'</div>'+(isTr?gSummary(cl):'')+tbHtml+rTab(cl,isTr)+'</div>';
+  return '<div class="con"><div class="hero"><div class="ha">'+ini(cl.name)+'</div><div style="flex:1"><div class="hn">'+cl.name+'</div><div class="hs">'+cl.goal+' &middot; '+cl.email+' &middot; '+total+' sessions logged</div></div>'+(isTr?'<button class="btn bp bs" onclick="openM(\'addWorkout\',\''+cl.id+'\')">+ Workout</button>':'')+'</div>'+(isTr?gSummary(cl):gClientBanner(cl))+tbHtml+rTab(cl,isTr)+'</div>';
+}
+function gClientBanner(cl){
+  var mine=(DB.checkins[cl.id]||[]).slice().reverse();
+  if(!mine.length){
+    return '<div class="card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-size:13px;color:var(--t3)">You haven\'t set a goal yet.</div><button class="btn bp bs" onclick="setT(\'goals\')">Set your goal</button></div>';
+  }
+  var latest=mine[0];
+  return '<div class="card" style="margin-bottom:20px;cursor:pointer" onclick="setT(\'goals\')"><div class="st" style="margin-bottom:8px">Your Goal</div><div style="font-size:14px;line-height:1.6;background:var(--sur2);padding:12px;border-radius:var(--rs)">'+esc(latest.goal_statement)+'</div></div>';
 }
 function gSummary(cl){
   var mine=(DB.checkins[cl.id]||[]).slice().reverse();
