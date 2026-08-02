@@ -401,6 +401,12 @@ function gQuestion(text,fn,cid){
 function gPanel(cid){
   var g=S.goal;
   if(g.step==="intro"){
+    var mine=(DB.checkins[cid]||[]).slice().reverse();
+    if(mine.length){
+      var latest=mine[0];
+      var histRows=mine.map(function(e){return '<div style="padding:10px 0;border-bottom:1px solid var(--bdr)"><div style="font-size:11px;color:var(--t3);margin-bottom:4px">'+fmtN(e.created_at)+'</div><div style="font-size:13px">'+esc(e.goal_statement)+'</div></div>';}).join('');
+      return '<div class="card"><div class="st">Your Goal</div><p style="font-size:14px;line-height:1.6;background:var(--sur2);padding:14px;border-radius:var(--rs);margin-bottom:16px">'+esc(latest.goal_statement)+'</p><button class="btn bp" onclick="gNext(\''+cid+'\',\'behavior\')">Start a new check-in</button>'+(mine.length>1?'<details style="margin-top:14px"><summary style="cursor:pointer;font-size:12px;color:var(--t3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Past check-ins ('+mine.length+')</summary><div style="margin-top:10px">'+histRows+'</div></details>':'')+'</div>';
+    }
     return '<div class="card"><div class="st">Goal Setting</div><p style="font-size:14px;color:var(--t2);margin-bottom:16px;line-height:1.6;">Two minutes to check in on where you are at and set your next goal.</p><button class="btn bp" onclick="gNext(\''+cid+'\',\'behavior\')">Let\'s go</button></div>';
   }
   if(g.step==="behavior"){
