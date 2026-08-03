@@ -170,7 +170,7 @@ function trainerApp(){
   var cl=DB.clients.find(function(c){return c.id===S.sel;});
   var sb2='<div class="sb"><div class="sbi"><div class="sbl">Clients ('+DB.clients.length+')</div>';
   DB.clients.forEach(function(c){
-    var hasnote=(!CT&&(DB.notes[c.id]||[]).some(function(n){return n.author==="client";}))&&!(S.seenNotes&&S.seenNotes[c.id]);
+    var cutoff=new Date();cutoff.setDate(cutoff.getDate()-7);var cutoffStr=cutoff.toISOString();var hasnote=!CT&&(DB.notes[c.id]||[]).some(function(n){return n.author==="client"&&n.created_at>=cutoffStr;})&&!(S.seenNotes&&S.seenNotes[c.id]);
     var dot=hasnote?'<span style="width:8px;height:8px;border-radius:50%;background:#E8A838;flex-shrink:0;display:inline-block;"></span>':'';
     sb2+='<div class="ci'+(c.id===S.sel?' on':'')+'" onclick="selC(\''+c.id+'\')"><div class="av">'+ini(c.name)+'</div><div><div class="cn" style="display:flex;align-items:center;gap:6px;">'+c.name+dot+'</div><div class="cg">'+c.goal+'</div></div></div>';
   });
