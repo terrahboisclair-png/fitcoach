@@ -191,10 +191,10 @@ function cDetail(cl,isTr){
 function gClientBanner(cl){
   var mine=(DB.checkins[cl.id]||[]).slice().reverse();
   if(!mine.length){
-    return '<div class="card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-size:13px;color:var(--t3)">You haven\'t set a goal yet.</div><button class="btn bp bs" onclick="setT(\'goals\')">Set your goal</button></div>';
+    return '<div class="card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-size:13px;color:var(--t3)">You haven\'t set a goal yet.</div><button class="btn bp bs" onclick="setT(\'goals\')">Set your goal</button></div><div class="card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:15px;font-weight:600;color:var(--t);">Weekly Check-In</div><div style="font-size:13px;color:var(--t3);margin-top:2px;">Let your trainer know how your week went</div></div><a href="https://form.jotform.com/261324152602041" target="_blank" class="btn bp bs" style="text-decoration:none;">&#128203; Open Form</a></div>';
   }
   var latest=mine[0];
-  return '<div class="card" style="margin-bottom:20px;cursor:pointer" onclick="setT(\'goals\')"><div class="st" style="margin-bottom:8px">Your Goal</div><div style="font-size:14px;line-height:1.6;background:var(--sur2);padding:12px;border-radius:var(--rs)">'+esc(latest.goal_statement)+'</div></div>';
+  return '<div class="card" style="margin-bottom:20px;cursor:pointer" onclick="setT(\'goals\')"><div class="st" style="margin-bottom:8px">Your Goal</div><div style="font-size:14px;line-height:1.6;background:var(--sur2);padding:12px;border-radius:var(--rs)">'+esc(latest.goal_statement)+'</div></div><div class="card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div style="font-size:15px;font-weight:600;color:var(--t);">Weekly Check-In</div><div style="font-size:13px;color:var(--t3);margin-top:2px;">Let your trainer know how your week went</div></div><a href="https://form.jotform.com/261324152602041" target="_blank" class="btn bp bs" style="text-decoration:none;">&#128203; Open Form</a></div>';
 }
 function gSummary(cl){
   var mine=(DB.checkins[cl.id]||[]).slice().reverse();
