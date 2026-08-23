@@ -54,7 +54,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--t);min-height:100vh;
 .wh{background:var(--dk);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
 .wt{font-family:var(--fd);font-size:18px;letter-spacing:1px;color:var(--acc);}
 .wm{font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;}
-.er{display:grid;grid-template-columns:1fr 70px 70px 80px 90px 90px;gap:8px;padding:10px 16px;border-bottom:1px solid var(--bdr);align-items:center;font-size:14px;}
+.er{display:grid;grid-template-columns:1fr 70px 70px 90px 90px;gap:8px;padding:10px 16px;border-bottom:1px solid var(--bdr);align-items:center;font-size:14px;}
 .er.hdr{background:var(--sur2);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;color:var(--t3);padding:8px 16px;}
 .en{font-weight:500;display:flex;align-items:center;gap:6px;}
 .pb{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#FF0000;color:white;font-size:10px;text-decoration:none;flex-shrink:0;line-height:1;}
@@ -119,7 +119,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--t);min-height:100vh;
 .ld{min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:24px;letter-spacing:2px;color:var(--t3);}
 ::-webkit-scrollbar{width:6px;}
 ::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px;}
-@media(max-width:768px){.sb{width:190px;}.er{grid-template-columns:1fr 55px 55px 65px 75px 75px;font-size:12px;}.sg{grid-template-columns:1fr 1fr;}.eg{grid-template-columns:1fr 1fr;}}
+@media(max-width:768px){.sb{width:190px;}.er{grid-template-columns:1fr 55px 55px 75px 75px;font-size:12px;}.sg{grid-template-columns:1fr 1fr;}.eg{grid-template-columns:1fr 1fr;}}
 </style>
 </head>
 <body>
@@ -272,7 +272,7 @@ function wCard(w,logs,cid,isTr){
     past='<div style="padding:12px 16px;background:var(--bg);border-top:1px solid var(--bdr)"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:8px">Recent Sessions</div>'+pr+'</div>';
   }
   var btns=isTr?'<button class="btn bg bs" onclick="openM(\'editWorkout\',\''+cid+'\',\''+w.id+'\')">Edit</button><button class="btn bg bs dr" onclick="delW(\''+w.id+'\',\''+cid+'\')">Delete</button>':'<button class="btn bp bs" onclick="logS(\''+cid+'\',\''+w.id+'\')">&#127947; Record Workout</button>';
-  return '<div class="wc"><div class="wh"><div><div class="wt">'+w.name+'</div><div class="wm">'+(w.day||'')+' &middot; '+(w.exercises||[]).length+' exercises</div></div><div style="display:flex;gap:8px;align-items:center;"><span id="sv'+w.id+'" class="tag tg hide">&#127881; Great work today!</span>'+btns+'</div></div><div class="er hdr"><span>Exercise</span><span>Sets</span><span>Reps</span><span>Target</span><span>Last Used</span><span>Today</span></div>'+exes+past+'</div>';
+  return '<div class="wc"><div class="wh"><div><div class="wt">'+w.name+'</div><div class="wm">'+(w.day||'')+' &middot; '+(w.exercises||[]).length+' exercises</div></div><div style="display:flex;gap:8px;align-items:center;"><span id="sv'+w.id+'" class="tag tg hide">&#127881; Great work today!</span>'+btns+'</div></div><div class="er hdr"><span>Exercise</span><span>Sets</span><span>Reps</span><span>Last Used</span><span>Today</span></div>'+exes+past+'</div>';
 }
 function ePanel(cid,entries){
   var latest=entries[entries.length-1],prev=entries[entries.length-2];
