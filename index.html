@@ -361,7 +361,29 @@ function nutPanel(cid,entries){
     return '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="width:100%;height:70px;overflow:visible"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>'+dots+'</svg>';
   }
 
-  var html='<div class="card"><div class="ch"><div class="st">&#127803; Nutrition</div><button class="btn bd bs" onclick="openM(\'addNutrition\',\''+cid+'\')">+ Add Entry</button></div>';
+  // Get latest EVOLT for BMR/TEE display
+  var evoltEntries=DB.evolt[cid]||[];
+  var latestEvolt=evoltEntries.length?evoltEntries[evoltEntries.length-1]:null;
+  var bmr=latestEvolt&&latestEvolt.bmr?parseFloat(latestEvolt.bmr):null;
+  var cl2=DB.clients.find(function(c){return c.id===cid;});
+  var actMult=cl2&&cl2.activity_mult?parseFloat(cl2.activity_mult):null;
+  var tee=bmr&&actMult?Math.round(bmr*actMult):null;
+  var actLabels={"1.2":"Sedentary","1.375":"Lightly Active","1.55":"Moderately Active","1.725":"Very Active","1.9":"Extra Active"};
+  var bmrTeeBar='';
+  if(bmr||!CT){
+    bmrTeeBar+='<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:16px;padding:12px;background:var(--sur2);border-radius:var(--rs);">';
+    bmrTeeBar+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);width:100%;margin-bottom:4px;">&#128293; Metabolic Data (from latest EVOLT)</div>';
+    if(bmr)bmrTeeBar+='<span style="font-size:14px;"><span style="color:var(--t3);">BMR: </span><strong>'+bmr+' kcal</strong></span>';
+    if(tee)bmrTeeBar+='<span style="font-size:14px;"><span style="color:var(--t3);">TEE: </span><strong>'+tee+' kcal</strong></span>';
+    if(actMult)bmrTeeBar+='<span style="font-size:12px;color:var(--t3);">('+( actLabels[actMult.toString()]||actMult+'x')+')</span>';
+    if(!bmr)bmrTeeBar+='<span style="font-size:13px;color:var(--t3);">No EVOLT scan yet — add one to see BMR & TEE.</span>';
+    if(!CT){
+      bmrTeeBar+='<div style="width:100%;margin-top:8px;"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);display:block;margin-bottom:4px;">Activity Level</label><select class="fi" style="width:auto;" onchange="saveActMult(\''+cid+'\',this.value)"><option value="">-- Select --</option>'+["1.2","1.375","1.55","1.725","1.9"].map(function(v){return '<option value="'+v+'"'+(actMult&&actMult.toString()===v?' selected':'')+'>'+actLabels[v]+'</option>';}).join('')+'</select></div>';
+    }
+    bmrTeeBar+='</div>';
+  }
+  var html='<div class="card"><div class="ch"><div class="st">&#127803; Nutrition</div><button class="btn bd bs" onclick="openM(\'addNutrition\',\''+cid+'\')">+ Add Entry</button></div>'+bmrTeeBar;
+
 
   if(latest){
     html+='<div class="sg">';
@@ -466,6 +488,14 @@ function aPanel(cid,isTr){
 function nModal(cid){
   var fields=[{k:"calories",l:"Calories",u:"kcal"},{k:"protein",l:"Protein",u:"g"},{k:"carbs",l:"Carbs",u:"g"},{k:"fat",l:"Fat",u:"g"},{k:"water",l:"Water",u:"oz"}];
   return '<div class="ov" onclick="closeM()"><div class="mo" onclick="event.stopPropagation()"><div class="mt">Add Nutrition Entry</div><div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="nu_date" value="'+td()+'"></div><div class="eg">'+fields.map(function(f){return '<div class="fg"><label class="fl">'+f.l+' ('+f.u+')</label><input type="number" step="1" class="fi" id="nu_'+f.k+'" placeholder="0"></div>';}).join('')+'</div><div class="mf"><button class="btn bg" onclick="closeM()">Cancel</button><button class="btn bp" onclick="doSaveNutrition(\''+cid+'\')">Save Entry</button></div></div></div>';
+}
+function saveActMult(cid,val){
+  sb.from("clients").update({activity_mult:val}).eq("id",cid).then(function(r){
+    if(r.error){alert("Error: "+r.error.message);return;}
+    var cl=DB.clients.find(function(c){return c.id===cid;});
+    if(cl)cl.activity_mult=val;
+    render();
+  });
 }
 function doSaveNutrition(cid){
   var fields=["calories","protein","carbs","fat","water"];
