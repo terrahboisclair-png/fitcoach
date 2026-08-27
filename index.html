@@ -608,7 +608,7 @@ function gSetTimeframe(cid){var el=document.getElementById("gf");if(!el||!el.val
 function gReset(cid){S.goal={step:"intro",behavior:"",stageId:null,draft:{specific:"",measurable:"",timeframe:"",motivation:""}};render();}
 function gSubmit(cid){
   var g=S.goal;
-  var stmt='By '+(g.draft.timeframe||'soon')+', will '+g.draft.specific+'. Tracked by: '+g.draft.measurable+'. Why it matters: '+g.draft.motivation+'.';
+  var stmt='By '+(g.draft.timeframe||'soon')+', I will '+g.draft.specific+'. Tracked by: '+g.draft.measurable+'. Why it matters: '+g.draft.motivation+'.';
   sb.from("checkins").insert({client_id:cid,behavior:g.behavior,stage_id:g.stageId,goal_specific:g.draft.specific,goal_measurable:g.draft.measurable,goal_timeframe:g.draft.timeframe||null,goal_motivation:g.draft.motivation,goal_statement:stmt}).select().single().then(function(r){
     if(r.error){alert(r.error.message);return;}
     if(!DB.checkins[cid])DB.checkins[cid]=[];
