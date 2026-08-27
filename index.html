@@ -346,7 +346,6 @@ function ePanel(cid,entries){
     fields.forEach(function(f){var dv=dlt(f.k);var cls=dv===null?'':(gd(f.k)?(dv<0?'pos':'neg'):(dv>0?'pos':'neg'));html+='<div class="sc"><div class="sv">'+(latest[f.k]||'-')+'<span style="font-size:13px">'+f.u+'</span></div><div class="sl">'+f.l+'</div>'+(dv!==null?'<div class="sd '+cls+'">'+(dv>0?'&#9650;':'&#9660;')+' '+Math.abs(dv).toFixed(1)+f.u+'</div>':'')+'</div>';});
     html+='</div>';
   }
-  if(entries.length>1){html+='<div class="card" style="margin-top:16px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--t2);margin-bottom:8px">Body Fat % Trend</div>'+spk(entries.map(function(e){return parseFloat(e.body_fat);}).filter(Boolean),"#A970FF")+'<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--t2);margin:12px 0 8px">Muscle Mass Trend</div>'+spk(entries.map(function(e){return parseFloat(e.muscle_mass);}).filter(Boolean),"#F2F0F5")+'</div>';}
   if(!entries.length)html+='<div class="emp"><div class="ei">&#128202;</div><div class="et">No Scans Yet</div><div class="es">Add the first EVOLT scan to start tracking.</div></div>';
   if(entries.length){
     html+='<div class="card" style="margin-top:16px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--t2);margin-bottom:12px">Scan History</div>';
@@ -450,7 +449,6 @@ function nutPanel(cid,entries){
   }
 
   if(entries.length>1){
-    html+='<div class="card" style="margin-top:16px"><div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--t2);margin-bottom:8px">Calories Trend</div>'+spk(entries.map(function(e){return parseFloat(e.calories);}).filter(Boolean),"#E8A838")+'<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--t2);margin:12px 0 8px">Protein Trend</div>'+spk(entries.map(function(e){return parseFloat(e.protein);}).filter(Boolean),"#1B3A5C")+'</div>';
   }
 
   if(!entries.length){
