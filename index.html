@@ -251,10 +251,10 @@ function goalQA(latest){
 function gClientBanner(cl){
   var mine=(DB.checkins[cl.id]||[]).slice().reverse();
   if(!mine.length){
-    return '<div class="card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-size:13px;color:var(--t3)">You haven\'t set a goal yet.</div><button class="btn bp bs" onclick="setT(\'goals\')">Set your goal</button></div><div class="card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#E8F0E0;border-color:#C5D9B0;"><div><div style="font-size:15px;font-weight:600;color:#3a5a2a;">&#11088; Weekly Check-In</div><div style="font-size:13px;color:var(--t3);margin-top:2px;">Let your trainer know how your week went</div></div><a href="https://form.jotform.com/261324152602041" target="_blank" style="text-decoration:none;padding:10px 20px;border-radius:var(--rs);border:none;font-family:var(--fb);font-size:14px;font-weight:700;cursor:pointer;background:var(--acc);color:var(--dk);display:inline-flex;align-items:center;gap:6px;">&#11088; Complete Check-In</a></div>';
+    return '<div class="card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="font-size:13px;color:var(--t3)">You haven\'t set a goal yet.</div><button class="btn bp bs" onclick="setT(\'goals\')">Set your goal</button></div>';
   }
   var latest=mine[0];
-  return '<div class="card" style="margin-bottom:20px;"><div class="st" style="margin-bottom:12px">Your Goal</div>'+goalQA(latest)+'</div><div class="card" style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#E8F0E0;border-color:#C5D9B0;"><div><div style="font-size:15px;font-weight:600;color:#3a5a2a;">&#11088; Weekly Check-In</div><div style="font-size:13px;color:var(--t3);margin-top:2px;">Let your trainer know how your week went</div></div><a href="https://form.jotform.com/261324152602041" target="_blank" style="text-decoration:none;padding:10px 20px;border-radius:var(--rs);border:none;font-family:var(--fb);font-size:14px;font-weight:700;cursor:pointer;background:var(--acc);color:var(--dk);display:inline-flex;align-items:center;gap:6px;">&#11088; Complete Check-In</a></div>';
+  return '<div class="card" style="margin-bottom:20px;"><div class="st" style="margin-bottom:12px">Your Goal</div>'+goalQA(latest)+'</div>';
 }
 function gSummary(cl){
   var mine=(DB.checkins[cl.id]||[]).slice().reverse();
