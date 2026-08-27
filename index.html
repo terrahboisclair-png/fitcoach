@@ -215,7 +215,7 @@ function rTab(cl,isTr){
     if(!ww.length){return '<div class="emp"><div class="ei">&#127947;</div><div class="et">No Workouts Yet</div><div class="es">'+(isTr?'Build the first workout plan.':'Ready to get started! Your trainer will add your workouts here soon.')+'</div>'+(isTr?'<br><button class="btn bp" style="margin-top:16px" onclick="openM(\'addWorkout\',\''+cl.id+'\')">+ Create Workout</button>':'')+'</div>';}
     return ww.map(function(w){return wCard(w,logs,cl.id,isTr);}).join('');
   }
-  if(S.tab==="nutrition"){return nPanel(cl.id,DB.nutrition[cl.id]||[]);}
+  if(S.tab==="nutrition"){return nutPanel(cl.id,DB.nutrition[cl.id]||[]);}
   if(S.tab==="evolt"){return '<div class="card">'+ePanel(cl.id,evolt)+'</div>';}
   if(S.tab==="strength"){
     var exMap={};
@@ -342,7 +342,7 @@ function wmDeltaHtml(curTotal,prevTotal){
 }
 
 
-function nPanel(cid,entries){
+function nutPanel(cid,entries){
   var fields=[
     {k:"calories",l:"Calories",u:"kcal",goodUp:true},
     {k:"protein",l:"Protein",u:"g",goodUp:true},
