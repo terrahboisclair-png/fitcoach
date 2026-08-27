@@ -117,6 +117,25 @@ body{font-family:var(--fb);background:var(--bg);color:var(--t);min-height:100vh;
 .ll{font-family:var(--fd);font-size:36px;letter-spacing:3px;color:var(--t);}
 .ll span{color:var(--acc);}
 .ld{min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:var(--fd);font-size:24px;letter-spacing:2px;color:var(--t3);}
+.landing{padding:24px;max-width:600px;margin:0 auto;}
+.landing-welcome{text-align:center;margin-bottom:32px;}
+.landing-name{font-family:var(--fd);font-size:36px;letter-spacing:2px;color:var(--acc);margin-bottom:4px;}
+.landing-sub{font-size:14px;color:var(--t2);}
+.landing-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.lcard{background:var(--sur);border:1px solid var(--bdr);border-radius:20px;padding:24px 16px;text-align:center;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.lcard:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,0.08);}
+.lcard:active{transform:translateY(0);}
+.lcard-icon{font-size:36px;line-height:1;}
+.lcard-label{font-family:var(--fd);font-size:18px;letter-spacing:1px;color:var(--t);}
+.lcard-sub{font-size:12px;color:var(--t3);}
+.lcard.c1{background:linear-gradient(135deg,#FFF5E6,#FFF0D6);}
+.lcard.c2{background:linear-gradient(135deg,#E8F5E9,#D5EDD7);}
+.lcard.c3{background:linear-gradient(135deg,#E8F0FF,#D5E3FF);}
+.lcard.c4{background:linear-gradient(135deg,#FFF0F0,#FFE0E0);}
+.lcard.c5{background:linear-gradient(135deg,#F0F5E8,#E3EDD5);}
+.lcard.c6{background:linear-gradient(135deg,#FFF8E6,#FFF0C8);}
+.lcard.c7{background:linear-gradient(135deg,#F5E8FF,#EAD5FF);}
+.lcard.c8{background:linear-gradient(135deg,#E8F5F5,#D5EDED);}
 ::-webkit-scrollbar{width:6px;}
 ::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px;}
 @media(max-width:768px){.sb{width:190px;}.er{grid-template-columns:1fr 55px 55px 75px 75px;font-size:12px;}.sg{grid-template-columns:1fr 1fr;}.eg{grid-template-columns:1fr 1fr;}}
@@ -130,7 +149,7 @@ var SB_KEY="sb_publishable_KK-9Sj1ktTcTPQ3VNl_FRQ_-Mriqax-";
 var sb=supabase.createClient(SB_URL,SB_KEY);
 var params=new URLSearchParams(location.search);
 var CT=params.get("client");
-var S={view:"trainer",sel:null,tab:"workouts",modal:null,wm:curYM(),goal:{step:"intro",behavior:"",stageId:null,draft:{specific:"",measurable:"",timeframe:"",motivation:""}}};
+var S={view:"trainer",sel:null,tab:CT?"home":"workouts",modal:null,wm:curYM(),goal:{step:"intro",behavior:"",stageId:null,draft:{specific:"",measurable:"",timeframe:"",motivation:""}}};
 var DB={clients:[],workouts:{},logs:{},evolt:{},walkOptins:{},walkLogs:{},notes:{},checkins:{},assessments:{},nutrition:{}};
 var STAGES={
   precontemplation:{order:1,name:"Precontemplation",color:"#8FA8FF",bg:"rgba(143,168,255,0.15)",definition:"Not currently doing the behavior and no intention of starting in the next 6 months. May be unaware of the need to change or discouraged by a past attempt.",strategies:["Share info gently, no pressure to act yet","Help them connect emotionally to what's at stake","Explore how this affects people or things they care about"]},
@@ -177,7 +196,7 @@ function trainerApp(){
   sb2+='<button class="ab" onclick="openM(\'addClient\')">+ Add Client</button></div></div>';
   return '<div class="app"><div class="bar"><div class="logo">FUELWELL<span>360</span></div><div class="tr"><div class="vt"><button class="'+(S.view==="trainer"?"on":"")+'" onclick="setV(\'trainer\')">Trainer</button><button class="'+(S.view==="preview"?"on":"")+'" onclick="setV(\'preview\')">Preview</button><button class="'+(S.view==="walk"?"on":"")+'" onclick="setV(\'walk\')">Team Walk</button></div><button onclick="expD()" style="padding:6px 14px;font-size:13px;font-family:var(--fb);font-weight:600;border:none;background:rgba(169,112,255,0.15);color:var(--acc);border-radius:8px;cursor:pointer;">&#8595; Export</button></div></div><div class="main">'+(S.view==="walk"?wkBoard():sb2+(cl?cDetail(cl,true):'<div class="nc"><div class="ni">&#128072;</div><div class="nt">Select a Client</div></div>'))+'</div>'+(S.modal?rModal():'')+' </div>';
 }
-function clientApp(cl){return '<div class="app"><div class="bar"><div class="logo">FUELWELL<span>360</span></div></div><div class="main">'+cDetail(cl,false)+'</div>'+(S.modal?rModal():'')+' </div>';}
+function clientApp(cl){var inner=S.tab==='home'||!S.tab?'<div class="con">'+clientLanding(cl)+'</div>':cDetail(cl,false);return '<div class="app"><div class="bar"><div class="logo">FUELWELL<span>360</span></div><div style="flex:1"></div>'+(S.tab&&S.tab!=='home'?'<button onclick="setT(\'home\'" style="padding:6px 14px;font-size:13px;font-family:var(--fb);font-weight:600;border:none;background:rgba(255,255,255,0.15);color:white;border-radius:8px;cursor:pointer;">&#8592; Home</button>':'')+'</div><div class="main">'+inner+'</div>'+(S.modal?rModal():'')+' </div>';}
 function cDetail(cl,isTr){
   var tabs=isTr?["workouts","nutrition","evolt","strength","assess","walk","notes","access"]:["workouts","nutrition","evolt","strength","assess","walk","notes","goals"];
   var labels={workouts:"Workouts",nutrition:"Nutrition",evolt:"EVOLT",strength:"Strength",assess:"Assessment",walk:"Walk",notes:"Notes",access:"Client Link",goals:"Goal Setting"};
@@ -187,6 +206,30 @@ function cDetail(cl,isTr){
   tabs.forEach(function(t){tbHtml+='<button class="tb'+(S.tab===t?' on':'')+'" onclick="setT(\''+t+'\')">'+labels[t]+'</button>';});
   tbHtml+='</div>';
   return '<div class="con"><div class="hero"><div class="ha">'+ini(cl.name)+'</div><div style="flex:1"><div class="hn">'+cl.name+'</div><div class="hs">'+cl.goal+' &middot; '+cl.email+' &middot; '+total+' sessions logged</div></div>'+(isTr?'<button class="btn bp bs" onclick="openM(\'addWorkout\',\''+cl.id+'\')">+ Workout</button>':'')+'</div>'+(isTr?gSummary(cl):gClientBanner(cl))+tbHtml+rTab(cl,isTr)+'</div>';
+}
+
+function clientLanding(cl){
+  var pages=[
+    {tab:'workouts',icon:'&#127947;',label:'Workouts',sub:'Log your training',cls:'c1'},
+    {tab:'nutrition',icon:'&#129367;',label:'Nutrition',sub:'Track your food',cls:'c2'},
+    {tab:'evolt',icon:'&#128202;',label:'EVOLT',sub:'Body composition',cls:'c3'},
+    {tab:'strength',icon:'&#128170;',label:'Strength',sub:'Weight progression',cls:'c4'},
+    {tab:'assess',icon:'&#127937;',label:'Assessment',sub:'Performance tests',cls:'c5'},
+    {tab:'walk',icon:'&#128694;',label:'Walk',sub:'Step challenge',cls:'c6'},
+    {tab:'notes',icon:'&#128221;',label:'Notes',sub:'Messages',cls:'c7'},
+    {tab:'goals',icon:'&#127919;',label:'Goal Setting',sub:'Your journey',cls:'c8'}
+  ];
+  var html='<div class="landing">';
+  html+='<div class="landing-welcome"><div class="landing-name">Hi, '+ini(cl.name)+'! &#128075;</div><div style="font-family:var(--fd);font-size:20px;letter-spacing:1px;color:var(--t);margin-bottom:4px;">'+cl.name.split(' ')[0]+'</div><div class="landing-sub">What would you like to work on today?</div></div>';
+  html+='<div class="landing-grid">';
+  pages.forEach(function(p){
+    html+='<div class="lcard '+p.cls+'" onclick="setT(\''+p.tab+'\')"><div class="lcard-icon">'+p.icon+'</div><div class="lcard-label">'+p.label+'</div><div class="lcard-sub">'+p.sub+'</div></div>';
+  });
+  html+='</div>';
+  // Add checkin button at bottom
+  html+='<div class="card" style="margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#E8F0E0;border-color:#C5D9B0;"><div><div style="font-size:15px;font-weight:600;color:#3a5a2a;">&#11088; Weekly Check-In</div><div style="font-size:13px;color:var(--t3);margin-top:2px;">Let your trainer know how your week went</div></div><a href="https://form.jotform.com/261324152602041" target="_blank" style="text-decoration:none;padding:10px 20px;border-radius:var(--rs);border:none;font-family:var(--fb);font-size:14px;font-weight:700;cursor:pointer;background:var(--acc);color:var(--dk);display:inline-flex;align-items:center;gap:6px;">&#11088; Complete Check-In</a></div>';
+  html+='</div>';
+  return html;
 }
 function goalQA(latest){
   var qs=['What habit or goal are you working on?','What specifically will you do?','How will you measure it?','By when?','Why does this matter to you?'];
