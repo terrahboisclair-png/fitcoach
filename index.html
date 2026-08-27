@@ -380,6 +380,7 @@ function nutPanel(cid,entries){
     if(!CT){
       bmrTeeBar+='<div style="width:100%;margin-top:8px;"><label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);display:block;margin-bottom:4px;">Activity Level</label><select class="fi" style="width:auto;" onchange="saveActMult(\''+cid+'\',this.value)"><option value="">-- Select --</option>'+["1.2","1.375","1.55","1.725","1.9"].map(function(v){return '<option value="'+v+'"'+(actMult&&actMult.toString()===v?' selected':'')+'>'+actLabels[v]+'</option>';}).join('')+'</select></div>';
     }
+    bmrTeeBar+='<div style="width:100%;margin-top:10px;padding-top:10px;border-top:1px solid var(--bdr);font-size:12px;color:var(--t2);line-height:1.6;"><strong>BMR</strong> (Basal Metabolic Rate) is the number of calories your body burns just to keep you alive — think breathing, heart beating, and staying warm. <strong>TEE</strong> (Total Energy Expenditure) is your BMR plus the calories you burn through daily activity and exercise. This is the number we use to build your nutrition plan.</div>';
     bmrTeeBar+='</div>';
   }
   var html='<div class="card"><div class="ch"><div class="st">&#127803; Nutrition</div><button class="btn bd bs" onclick="openM(\'addNutrition\',\''+cid+'\')">+ Add Entry</button></div>'+bmrTeeBar;
