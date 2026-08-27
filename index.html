@@ -259,7 +259,7 @@ function rTab(cl,isTr){
 }
 function wCard(w,logs,cid,isTr){
   var tl=(logs[w.id]||[]).find(function(l){return l.date===td();});
-  var pl=(logs[w.id]||[]).filter(function(l){return l.date!==td();}).slice(-3).reverse();
+  var cutoff60=new Date();cutoff60.setDate(cutoff60.getDate()-60);var cutoff60Str=cutoff60.toISOString().slice(0,10);var pl=(logs[w.id]||[]).filter(function(l){return l.date!==td()&&l.date>=cutoff60Str;}).slice(-3).reverse();
   var exes=(w.exercises||[]).map(function(ex,i){
     var playBtn=ex.url?'<a href="'+ex.url+'" target="_blank" class="pb" title="Watch demo">&#9654;</a>':'';
     var cueHtml=ex.cue?'<div style="font-size:11px;color:var(--t3);font-style:italic;margin-top:2px;line-height:1.3">'+esc(ex.cue)+'</div>':'';
