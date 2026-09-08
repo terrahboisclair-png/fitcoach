@@ -205,7 +205,7 @@ function trainerApp(){
 }
 function clientApp(cl){var inner=S.tab==='home'||!S.tab?'<div class="con">'+clientLanding(cl)+'</div>':cDetail(cl,false);return '<div class="app"><div class="bar"><div class="logo">FUELWELL<span>360</span></div><div style="flex:1"></div>'+(S.tab&&S.tab!=='home'?'<button onclick="setT(\'home\')" style="padding:6px 14px;font-size:13px;font-family:var(--fb);font-weight:600;border:none;background:rgba(255,255,255,0.15);color:white;border-radius:8px;cursor:pointer;">&#8592; Home</button>':'')+'</div><div class="main">'+inner+'</div>'+(S.modal?rModal():'')+' </div>';}
 function cDetail(cl,isTr){
-  var tabs=isTr?["workouts","nutrition","evolt","strength","assess","walk","notes","access"]:["workouts","nutrition","evolt","strength","assess","walk","notes","goals"];
+  var isWalkOnly=cl.goal==='Walking Only';var tabs=isTr?["workouts","nutrition","evolt","strength","assess","walk","notes","access"]:(isWalkOnly?["walk"]:["workouts","nutrition","evolt","strength","assess","walk","notes","goals"]);
   var labels={workouts:"Workouts",nutrition:"Nutrition",evolt:"Body Metrics",strength:"Strength",assess:"Assessment",walk:"Walk",notes:"Notes",access:"Client Link",goals:"Goal Setting"};
   var logs=DB.logs[cl.id]||{};
   var total=Object.values(logs).reduce(function(a,v){return a+v.length;},0);
@@ -216,6 +216,17 @@ function cDetail(cl,isTr){
 }
 
 function clientLanding(cl){
+  var isWalk=cl.goal==='Walking Only';
+  if(isWalk){
+    var html='<div class="landing">';
+    html+='<div class="landing-welcome"><div class="landing-name">Hi! &#128075;</div><div style="font-family:var(--fd);font-size:20px;letter-spacing:1px;color:var(--t);margin-bottom:4px;">'+cl.name.split(' ')[0]+'</div><div class="landing-sub">Welcome to FuelWell360!</div></div>';
+    html+='<div class="lcard c6" style="margin-bottom:16px;cursor:pointer;flex-direction:row;justify-content:space-between;" onclick="setT(\'walk\')"><div style="display:flex;align-items:center;gap:12px;"><div class="lcard-icon">&#128694;</div><div><div class="lcard-label">Walk Challenge</div><div class="lcard-sub">Track your steps</div></div></div><span style="color:var(--t3);font-size:20px;">&#8250;</span></div>';
+    html+='<a href="https://form.jotform.com/261324152602041" target="_blank" style="text-decoration:none;display:block;margin-bottom:16px;"><div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#E8F0E0;border-color:#C5D9B0;"><div><div style="font-size:15px;font-weight:600;color:#3a5a2a;">&#11088; Weekly Check-In</div><div style="font-size:13px;color:var(--t3);margin-top:2px;">Let us know how your week went</div></div><span style="padding:8px 16px;border-radius:var(--rs);background:var(--acc);color:var(--dk);font-family:var(--fb);font-size:13px;font-weight:700;">Complete &#8594;</span></div></a>';
+    html+='<a href="https://fuelwell360.blogspot.com/" target="_blank" style="text-decoration:none;display:block;"><div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,#F5F0E8,#EDE5D5);border-color:#DDD5C0;"><div><div style="font-size:15px;font-weight:600;color:var(--t);">&#128221; Terrah\'s Wellness Blog</div><div style="font-size:13px;color:var(--t3);margin-top:2px;">Tips, recipes & healthy living inspiration</div></div><span style="padding:8px 16px;border-radius:var(--rs);background:var(--acc);color:var(--dk);font-family:var(--fb);font-size:13px;font-weight:700;">Read Now &#8594;</span></div></a>';
+    html+='</div>';
+    return html;
+  }
+
   var pages=[
     {tab:'workouts',icon:'&#127947;',label:'Workouts',sub:'Log your training',cls:'c1'},
     {tab:'nutrition',icon:'&#129367;',label:'Nutrition',sub:'Track your food',cls:'c2'},
@@ -369,7 +380,7 @@ function ePanel(cid,entries){
   return html;
 }
 function rModal(){var m=S.modal;if(m.type==="addClient")return aCModal();if(m.type==="addWorkout"||m.type==="editWorkout")return wBModal(m);if(m.type==="addEvolt")return eModal(m.cid);if(m.type==="addNutrition")return nModal(m.cid);return '';}
-function aCModal(){var goals=["General Fitness","Muscle Gain","Weight Loss","Athletic Performance","Mobility","Endurance"];return '<div class="ov" onclick="closeM()"><div class="mo" onclick="event.stopPropagation()"><div class="mt">Add New Client</div><div class="fg"><label class="fl">Full Name</label><input class="fi" id="mn" placeholder="Jane Smith"></div><div class="fg"><label class="fl">Email</label><input class="fi" id="me" type="email" placeholder="jane@email.com"></div><div class="fg"><label class="fl">Goal</label><select class="fi" id="mg">'+["General Fitness","Muscle Gain","Weight Loss","Athletic Performance","Mobility","Endurance"].map(function(g){return '<option>'+g+'</option>';}).join('')+'</select></div><div class="mf"><button class="btn bg" onclick="closeM()">Cancel</button><button class="btn bp" onclick="doAC()">Add Client</button></div></div></div>';}
+function aCModal(){var goals=["General Fitness","Muscle Gain","Weight Loss","Athletic Performance","Mobility","Endurance","Walking Only"];return '<div class="ov" onclick="closeM()"><div class="mo" onclick="event.stopPropagation()"><div class="mt">Add New Client</div><div class="fg"><label class="fl">Full Name</label><input class="fi" id="mn" placeholder="Jane Smith"></div><div class="fg"><label class="fl">Email</label><input class="fi" id="me" type="email" placeholder="jane@email.com"></div><div class="fg"><label class="fl">Goal</label><select class="fi" id="mg">'+["General Fitness","Muscle Gain","Weight Loss","Athletic Performance","Mobility","Endurance","Walking Only"].map(function(g){return '<option>'+g+'</option>';}).join('')+'</select></div><div class="mf"><button class="btn bg" onclick="closeM()">Cancel</button><button class="btn bp" onclick="doAC()">Add Client</button></div></div></div>';}
 function wBModal(m){
   var ex=m.type==="editWorkout"?(DB.workouts[m.cid]||[]).find(function(w){return w.id===m.wid;}):null;
   var exes=ex&&ex.exercises?ex.exercises:[{name:'',sets:'',reps:'',weight:'',rest:'',url:''}];
