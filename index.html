@@ -176,7 +176,7 @@ function tok(n){return"tok_"+n.toLowerCase().replace(/\s+/g,"").slice(0,8)+Math.
 function ini(n){return((n||"?").split(" ").map(function(x){return x[0];}).join("")).slice(0,2).toUpperCase();}
 function td(){return new Date().toISOString().slice(0,10);}
 function loadAll(){
-  return Promise.all([sb.from("clients").select("*").order("created_at"),sb.from("workouts").select("*").order("created_at",{ascending:false}),sb.from("logs").select("*").order("date"),sb.from("evolt").select("*").order("date"),sb.from("walk_optins").select("*"),sb.from("walk_logs").select("*").order("log_date"),sb.from("notes").select("*").order("created_at"),sb.from("checkins").select("*").order("created_at"),sb.from("assessments").select("*").order("created_at"),sb.from("nutrition").select("*").order("date")]).then(function(res){
+  return Promise.all([sb.from("clients").select("*").order("created_at"),sb.from("workouts").select("*").order("created_at",{ascending:false}),sb.from("logs").select("*").order("date"),sb.from("evolt").select("*").order("date"),sb.from("walk_optins").select("*"),sb.from("walk_logs").select("*").order("log_date"),sb.from("notes").select("*").order("created_at"),sb.from("checkins").select("*").order("created_at"),sb.from("assessments").select("*").order("date"),sb.from("nutrition").select("*").order("date")]).then(function(res){
     DB.clients=res[0].data||[];
     DB.workouts={};(res[1].data||[]).forEach(function(x){if(!DB.workouts[x.client_id])DB.workouts[x.client_id]=[];DB.workouts[x.client_id].push(x);});
     DB.logs={};(res[2].data||[]).forEach(function(x){if(!DB.logs[x.client_id])DB.logs[x.client_id]={};if(!DB.logs[x.client_id][x.workout_id])DB.logs[x.client_id][x.workout_id]=[];DB.logs[x.client_id][x.workout_id].push(x);});
