@@ -502,6 +502,9 @@ function aPanel(cid,isTr){
     {key:"mile_run",label:"1 Mile Run",unit:"mm:ss",cat:"Cardio"},
     {key:"row_500",label:"500 Meter Row",unit:"mm:ss",cat:"Cardio"},
     {key:"row_resistance",label:"Row Resistance Level",unit:"level",cat:"Cardio"},
+    {key:"elliptical_resistance",label:"Lateral Elliptical — Resistance",unit:"level",cat:"Cardio"},
+    {key:"elliptical_duration",label:"Lateral Elliptical — Duration",unit:"mm:ss",cat:"Cardio"},
+    {key:"elliptical_calories",label:"Lateral Elliptical — Calories",unit:"cal",cat:"Cardio"},
     {key:"pushups",label:"1 Minute Pushups",unit:"reps",cat:"Endurance"},
     {key:"squats",label:"1 Minute Squats",unit:"reps",cat:"Endurance"},
     {key:"squat_lb",label:"Squat",unit:"lbs",cat:"Strength"},
@@ -532,7 +535,21 @@ function aPanel(cid,isTr){
       if(!catFields.length)return;
       hasAnyLatest=true;
       html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin:12px 0 6px;">'+cat+'</div>';
+      // Group elliptical fields into one combined row
+      var ellipKeys=['elliptical_resistance','elliptical_duration','elliptical_calories'];
+      var ellipShown=false;
       catFields.forEach(function(f){
+        if(ellipKeys.indexOf(f.key)!==-1){
+          if(!ellipShown&&(latest.elliptical_resistance||latest.elliptical_duration||latest.elliptical_calories)){
+            ellipShown=true;
+            var parts=[];
+            if(latest.elliptical_resistance)parts.push('Level '+latest.elliptical_resistance);
+            if(latest.elliptical_duration)parts.push(latest.elliptical_duration+' min');
+            if(latest.elliptical_calories)parts.push(latest.elliptical_calories+' cal');
+            html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bdr);"><span style="font-size:13px;color:var(--t2);">Lateral Elliptical</span><span style="font-size:14px;font-weight:600;">'+parts.join(' &middot; ')+'</span></div>';
+          }
+          return;
+        }
         var val=latest[f.key];
         var prevVal=prev?prev[f.key]:null;
         var delta='';
@@ -632,7 +649,7 @@ function runCalc(){
   document.getElementById('calc_result').style.display='block';
 }
 function doSaveAssess(cid){
-  var fields=["step_test","jumping_jacks","mile_run","row_500","row_resistance","pushups","squats","squat_lb","bench_lb","deadlift_lb","ohp_lb"];
+  var fields=["step_test","jumping_jacks","mile_run","row_500","row_resistance","elliptical_resistance","elliptical_duration","elliptical_calories","pushups","squats","squat_lb","bench_lb","deadlift_lb","ohp_lb"];
   var entry={client_id:cid,date:document.getElementById("af_date").value};
   fields.forEach(function(f){var el=document.getElementById("af_"+f);if(el&&el.value.trim())entry[f]=el.value.trim();});
   sb.from("assessments").insert(entry).select().single().then(function(r){
