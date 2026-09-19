@@ -198,6 +198,8 @@ function trainerApp(){
   DB.clients.forEach(function(c){
     var cutoff=new Date();cutoff.setDate(cutoff.getDate()-7);var cutoffStr=cutoff.toISOString();var hasnote=!CT&&(DB.notes[c.id]||[]).some(function(n){return n.author==="client"&&n.created_at>=cutoffStr;})&&!(S.seenNotes&&S.seenNotes[c.id]);
     var dot=hasnote?'<span style="width:8px;height:8px;border-radius:50%;background:#E8A838;flex-shrink:0;display:inline-block;"></span>':'';
+    var assessDue=!CT&&c.assess_due&&cl2.assess_due<=new Date().toISOString().slice(0,10);
+    var assessBadge=assessDue?'<span style="font-size:9px;font-weight:700;background:#C0392B;color:white;border-radius:4px;padding:1px 5px;flex-shrink:0;">ASSESS</span>':'';
     sb2+='<div class="ci'+(c.id===S.sel?' on':'')+'" onclick="selC(\''+c.id+'\')"><div class="av">'+ini(c.name)+'</div><div><div class="cn" style="display:flex;align-items:center;gap:6px;">'+c.name+dot+'</div><div class="cg">'+c.goal+'</div></div></div>';
   });
   sb2+='<button class="ab" onclick="openM(\'addClient\')">+ Add Client</button></div></div>';
@@ -221,7 +223,7 @@ function clientLanding(cl){
     var html='<div class="landing">';
     html+='<div class="landing-welcome"><div class="landing-name">Hi! &#128075;</div><div style="font-family:var(--fd);font-size:20px;letter-spacing:1px;color:var(--t);margin-bottom:4px;">'+cl.name.split(' ')[0]+'</div><div class="landing-sub">Welcome to FuelWell360!</div></div>';
     html+='<div class="lcard c6" style="margin-bottom:16px;cursor:pointer;flex-direction:row;justify-content:space-between;" onclick="setT(\'walk\')"><div style="display:flex;align-items:center;gap:12px;"><div class="lcard-icon">&#128694;</div><div><div class="lcard-label">Walk Challenge</div><div class="lcard-sub">Track your steps</div></div></div><span style="color:var(--t3);font-size:20px;">&#8250;</span></div>';
-    html+='<a href="https://form.jotform.com/261324152602041" target="_blank" style="text-decoration:none;display:block;margin-bottom:16px;"><div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#E8F0E0;border-color:#C5D9B0;"><div><div style="font-size:15px;font-weight:600;color:#3a5a2a;">&#11088; Weekly Check-In</div><div style="font-size:13px;color:var(--t3);margin-top:2px;">Let us know how your week went</div></div><span style="padding:8px 16px;border-radius:var(--rs);background:var(--acc);color:var(--dk);font-family:var(--fb);font-size:13px;font-weight:700;">Complete &#8594;</span></div></a>';
+    html+='<a href="https://form.jotform.com/261324152602041" target="_blank" style="text-decoration:none;display:block;margin-bottom:16px;"><div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:#E8F0E0;border-color:#C5D9B0;"><div><div style="font-size:15px;font-weight:600;color:#3a5a2a;">&#11088; Weekly Check-In</div><div style="font-size:13px;color:var(--t3);margin-top:2px;">Let your trainer know how your week went</div></div><span style="padding:8px 16px;border-radius:var(--rs);background:var(--acc);color:var(--dk);font-family:var(--fb);font-size:13px;font-weight:700;">Complete &#8594;</span></div></a>';
     html+='<a href="https://fuelwell360.blogspot.com/" target="_blank" style="text-decoration:none;display:block;"><div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,#F5F0E8,#EDE5D5);border-color:#DDD5C0;"><div><div style="font-size:15px;font-weight:600;color:var(--t);">&#128221; Terrah\'s Wellness Blog</div><div style="font-size:13px;color:var(--t3);margin-top:2px;">Tips, recipes & healthy living inspiration</div></div><span style="padding:8px 16px;border-radius:var(--rs);background:var(--acc);color:var(--dk);font-family:var(--fb);font-size:13px;font-weight:700;">Read Now &#8594;</span></div></a>';
     html+='</div>';
     return html;
@@ -324,6 +326,7 @@ function rTab(cl,isTr){
   if(S.tab==="notes"){return nPanel(cl.id,isTr);}
   if(S.tab==="goals"){return gPanel(cl.id);}
   if(S.tab==="access"&&isTr){
+    var assessSection='<div class="card" style="margin-top:16px;"><div class="st" style="margin-bottom:12px;">&#128198; Assessment Due Date</div><div class="fr"><div class="fg"><label class="fl">Next Assessment Due</label><input type="date" class="fi" id="assess_due_date" value="'+(cl.assess_due||'')+'"></div><div class="fg" style="display:flex;align-items:flex-end;"><button class="btn bp" onclick="saveAssessDue(\''+cl.id+'\')" >Save</button></div></div><p style="font-size:12px;color:var(--t3);margin-top:8px;">A red ASSESS badge will appear next to this client\'s name when the date has passed.</p></div>';
     var link=location.origin+location.pathname+'?client='+cl.token;
     return '<div class="card"><div class="st">&#128279; Client Access Link</div><p style="font-size:14px;color:var(--t2);margin-bottom:16px;line-height:1.6;">Send this link to <strong>'+cl.name+'</strong>. They will see only their own data from any device.</p><div class="lb"><span class="lt">'+link+'</span><button class="btn bp bs" onclick="cpLink(\''+link+'\')">Copy Link</button></div><p style="font-size:12px;color:var(--t3);margin-top:12px;">Data is stored in the cloud and works on any device.</p></div>';
   }
@@ -519,18 +522,17 @@ function aPanel(cid,isTr){
   }).join('');
 
   var html='<div class="card"><div class="ch"><div class="st">&#127937; Performance Assessment</div></div>';
-  html+='<details'+(entries.length===0?' open':'')+'><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--acc);margin-bottom:12px;">+ Add New Assessment</summary>';
-  html+='<div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="af_date" value="'+new Date().toISOString().slice(0,10)+'"></div>';
-  html+=formFields;
-  html+='<button class="btn bp" style="margin-top:8px" onclick="doSaveAssess(\''+cid+'\')" >Save Assessment</button></details>';
 
   if(latest){
-    html+='<div class="dv"></div><div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--t3);margin-bottom:12px;">Latest Results — '+latest.date+'</div>';
+    html+='<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:var(--t3);margin-bottom:12px;">Latest Results — '+latest.date+'</div>';
+    var hasAnyLatest=false;
     cats.forEach(function(cat){
+      var catFields=fields.filter(function(f){return f.cat===cat&&latest[f.key];});
+      if(!catFields.length)return;
+      hasAnyLatest=true;
       html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin:12px 0 6px;">'+cat+'</div>';
-      fields.filter(function(f){return f.cat===cat;}).forEach(function(f){
+      catFields.forEach(function(f){
         var val=latest[f.key];
-        if(!val)return;
         var prevVal=prev?prev[f.key]:null;
         var delta='';
         if(prevVal&&f.unit==='lbs'){
@@ -540,10 +542,17 @@ function aPanel(cid,isTr){
         html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bdr);"><span style="font-size:13px;color:var(--t2);">'+f.label+'</span><span style="font-size:14px;font-weight:600;">'+val+' <span style="font-size:11px;color:var(--t3);">'+f.unit+'</span> '+delta+'</span></div>';
       });
     });
+    if(!hasAnyLatest)html+='<div style="font-size:13px;color:var(--t3);padding:8px 0;">No values recorded for this assessment.</div>';
+    html+='<div class="dv"></div>';
   }
 
-  if(entries.length>1){
-    html+='<div class="dv"></div><details><summary style="cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--t3);letter-spacing:0.5px;">History ('+entries.length+' assessments)</summary><div style="overflow-x:auto;margin-top:12px;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr><th style="text-align:left;padding:6px 8px;background:var(--dk);color:var(--acc);font-family:var(--fd);letter-spacing:1px;">Test</th>';
+  html+='<details'+(entries.length===0?' open':'')+'><summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--acc);margin-bottom:12px;">+ Add New Assessment</summary>';
+  html+='<div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="af_date" value="'+new Date().toISOString().slice(0,10)+'"></div>';
+  html+=formFields;
+  html+='<button class="btn bp" style="margin-top:8px" onclick="doSaveAssess(\''+cid+'\')" >Save Assessment</button></details>';
+
+  if(entries.length>0){
+    html+='<div class="dv"></div><details'+(entries.length>1?'':' open')+'><summary style="cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;color:var(--t3);letter-spacing:0.5px;">All Assessments ('+entries.length+')</summary><div style="overflow-x:auto;margin-top:12px;"><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr><th style="text-align:left;padding:6px 8px;background:var(--dk);color:var(--acc);font-family:var(--fd);letter-spacing:1px;">Test</th>';
     entries.forEach(function(e){html+='<th style="padding:6px 8px;background:var(--dk);color:white;white-space:nowrap;text-align:center;">'+e.date+'</th>';});
     html+='</tr></thead><tbody>';
     fields.forEach(function(f,ri){
@@ -564,6 +573,15 @@ function aPanel(cid,isTr){
 function nModal(cid){
   var fields=[{k:"calories",l:"Calories",u:"kcal"},{k:"protein",l:"Protein",u:"g"},{k:"carbs",l:"Carbs",u:"g"},{k:"fat",l:"Fat",u:"g"},{k:"water",l:"Water",u:"oz"}];
   return '<div class="ov" onclick="closeM()"><div class="mo" onclick="event.stopPropagation()"><div class="mt">Add Nutrition Entry</div><div class="fg"><label class="fl">Date</label><input type="date" class="fi" id="nu_date" value="'+td()+'"></div><div class="eg">'+fields.map(function(f){return '<div class="fg"><label class="fl">'+f.l+' ('+f.u+')</label><input type="number" step="1" class="fi" id="nu_'+f.k+'" placeholder="0"></div>';}).join('')+'</div><div class="mf"><button class="btn bg" onclick="closeM()">Cancel</button><button class="btn bp" onclick="doSaveNutrition(\''+cid+'\')">Save Entry</button></div></div></div>';
+}
+function saveAssessDue(cid){
+  var val=document.getElementById('assess_due_date').value;
+  sb.from('clients').update({assess_due:val}).eq('id',cid).then(function(r){
+    if(r.error){alert('Error: '+r.error.message);return;}
+    var cl=DB.clients.find(function(c){return c.id===cid;});
+    if(cl)cl.assess_due=val;
+    render();
+  });
 }
 function saveActMult(cid,val){
   sb.from("clients").update({activity_mult:val}).eq("id",cid).then(function(r){
