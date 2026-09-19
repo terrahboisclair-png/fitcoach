@@ -501,6 +501,7 @@ function aPanel(cid,isTr){
     {key:"jumping_jacks",label:"1 Minute Jumping Jacks",unit:"reps",cat:"Cardio"},
     {key:"mile_run",label:"1 Mile Run",unit:"mm:ss",cat:"Cardio"},
     {key:"row_500",label:"500 Meter Row",unit:"mm:ss",cat:"Cardio"},
+    {key:"row_resistance",label:"Row Resistance Level",unit:"level",cat:"Cardio"},
     {key:"pushups",label:"1 Minute Pushups",unit:"reps",cat:"Endurance"},
     {key:"squats",label:"1 Minute Squats",unit:"reps",cat:"Endurance"},
     {key:"squat_lb",label:"Squat",unit:"lbs",cat:"Strength"},
@@ -631,7 +632,7 @@ function runCalc(){
   document.getElementById('calc_result').style.display='block';
 }
 function doSaveAssess(cid){
-  var fields=["step_test","jumping_jacks","mile_run","row_500","pushups","squats","squat_lb","bench_lb","deadlift_lb","ohp_lb"];
+  var fields=["step_test","jumping_jacks","mile_run","row_500","row_resistance","pushups","squats","squat_lb","bench_lb","deadlift_lb","ohp_lb"];
   var entry={client_id:cid,date:document.getElementById("af_date").value};
   fields.forEach(function(f){var el=document.getElementById("af_"+f);if(el&&el.value.trim())entry[f]=el.value.trim();});
   sb.from("assessments").insert(entry).select().single().then(function(r){
