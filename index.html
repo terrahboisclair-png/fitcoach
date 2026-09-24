@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -136,6 +135,10 @@ body{font-family:var(--fb);background:var(--bg);color:var(--t);min-height:100vh;
 .lcard.c6{background:linear-gradient(135deg,#FFF8E6,#FFF0C8);}
 .lcard.c7{background:linear-gradient(135deg,#F5E8FF,#EAD5FF);}
 .lcard.c8{background:linear-gradient(135deg,#E8F5F5,#D5EDED);}
+.wc-pinned{border:2px solid var(--acc);box-shadow:0 0 0 3px rgba(232,184,75,0.15);}
+.pinned-banner{background:rgba(232,184,75,0.15);color:var(--acc);font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;padding:6px 16px;border-bottom:1px solid rgba(232,184,75,0.3);}
+.pin-btn{color:var(--t3);}
+.pin-btn.pinned{color:var(--acc);border-color:var(--acc);background:rgba(232,184,75,0.12);}
 ::-webkit-scrollbar{width:6px;}
 ::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:3px;}
 @media(max-width:768px){
@@ -287,7 +290,8 @@ function rTab(cl,isTr){
   var evolt=DB.evolt[cl.id]||[];
   if(S.tab==="workouts"){
     if(!ww.length){return '<div class="emp"><div class="ei">&#127947;</div><div class="et">No Workouts Yet</div><div class="es">'+(isTr?'Build the first workout plan.':'Ready to get started! Your trainer will add your workouts here soon.')+'</div>'+(isTr?'<br><button class="btn bp" style="margin-top:16px" onclick="openM(\'addWorkout\',\''+cl.id+'\')">+ Create Workout</button>':'')+'</div>';}
-    return ww.map(function(w){return wCard(w,logs,cl.id,isTr);}).join('');
+    var wwSorted=ww.slice().sort(function(a,b){return (b.pinned?1:0)-(a.pinned?1:0);});
+    return wwSorted.map(function(w){return wCard(w,logs,cl.id,isTr);}).join('');
   }
   if(S.tab==="nutrition"){return nutPanel(cl.id,DB.nutrition[cl.id]||[]);}
   if(S.tab==="evolt"){return '<div class="card">'+ePanel(cl.id,evolt)+'</div>';}
@@ -347,8 +351,10 @@ function wCard(w,logs,cid,isTr){
     var pr=pl.map(function(l){var v=Object.entries(l.data||{}).filter(function(p){return p[0].endsWith('_a');}).map(function(p){var i=parseInt(p[0]);return(w.exercises[i]?w.exercises[i].name:'?')+': '+p[1];}).join(' · ');return '<div style="font-size:12px;color:var(--t2);margin-bottom:4px"><strong>'+l.date+':</strong> '+v+'</div>';}).join('');
     past='<div style="padding:12px 16px;background:var(--bg);border-top:1px solid var(--bdr)"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:8px">Recent Sessions</div>'+pr+'</div>';
   }
-  var btns=isTr?'<button class="btn bg bs" onclick="openM(\'editWorkout\',\''+cid+'\',\''+w.id+'\')">Edit</button><button class="btn bg bs dr" onclick="delW(\''+w.id+'\',\''+cid+'\')">Delete</button>':'<button class="btn bp bs" onclick="logS(\''+cid+'\',\''+w.id+'\')">&#127947; Record Workout</button>';
-  return '<div class="wc"><div class="wh"><div><div class="wt">'+w.name+'</div><div class="wm">'+(w.day||'')+' &middot; '+(w.exercises||[]).length+' exercises</div></div><div style="display:flex;gap:8px;align-items:center;"><span id="sv'+w.id+'" class="tag tg hide">&#127881; Great work today!</span>'+btns+'</div></div><div class="er hdr"><span>Exercise</span><span>Sets</span><span>Reps</span><span>Last Used</span><span>Today</span></div>'+exes+past+'</div>';
+  var pinBtn=isTr?'<button class="btn bg bs pin-btn'+(w.pinned?' pinned':'')+'" onclick="doPin(\''+w.id+'\',\''+cid+'\','+(!w.pinned)+')" title="'+(w.pinned?'Unpin workout':'Pin to top')+'">'+(w.pinned?'&#128204; Pinned':'&#128204; Pin')+'</button>':'';
+  var btns=isTr?pinBtn+'<button class="btn bg bs" onclick="openM(\'editWorkout\',\''+cid+'\',\''+w.id+'\')">Edit</button><button class="btn bg bs dr" onclick="delW(\''+w.id+'\',\''+cid+'\')">Delete</button>':'<button class="btn bp bs" onclick="logS(\''+cid+'\',\''+w.id+'\')">&#127947; Record Workout</button>';
+  var pinnedBadge=w.pinned?'<div class="pinned-banner">&#128204; Pinned — Always shown at top</div>':'';
+  return '<div class="wc'+(w.pinned?' wc-pinned':'')+'">'+(w.pinned?pinnedBadge:'')+'<div class="wh"><div><div class="wt">'+w.name+'</div><div class="wm">'+(w.day||'')+' &middot; '+(w.exercises||[]).length+' exercises</div></div><div style="display:flex;gap:8px;align-items:center;"><span id="sv'+w.id+'" class="tag tg hide">&#127881; Great work today!</span>'+btns+'</div></div><div class="er hdr"><span>Exercise</span><span>Sets</span><span>Reps</span><span>Last Used</span><span>Today</span></div>'+exes+past+'</div>';
 }
 function ePanel(cid,entries){
   var latest=entries[entries.length-1],prev=entries[entries.length-2];
@@ -812,6 +818,7 @@ function doSW(cid,eid){
   p.then(function(){closeM();});
 }
 function delW(id,cid){if(!confirm("Delete this workout?"))return;sb.from("workouts").delete().eq("id",id).then(function(){DB.workouts[cid]=(DB.workouts[cid]||[]).filter(function(w){return w.id!==id;});render();});}
+function doPin(wid,cid,pin){sb.from("workouts").update({pinned:pin}).eq("id",wid).then(function(r){if(r.error){alert("Error: "+r.error.message);return;}if(DB.workouts[cid])DB.workouts[cid]=DB.workouts[cid].map(function(w){return w.id===wid?Object.assign({},w,{pinned:pin}):w;});render();});}
 function addExR(){var list=document.getElementById("exl");list.insertAdjacentHTML("beforeend",exR({},list.children.length));}
 function remExR(i){var el=document.getElementById("ex"+i);if(el)el.remove();}
 function doSE(cid){var fields=["body_fat","muscle_mass","bmr","hydration","visceral_fat","weight"];var entry={date:document.getElementById("ev_date").value,client_id:cid};fields.forEach(function(f){var el=document.getElementById("ev_"+f);if(el&&el.value)entry[f]=parseFloat(el.value);});sb.from("evolt").insert(entry).select().single().then(function(r){if(r.error){alert(r.error.message);return;}if(!DB.evolt[cid])DB.evolt[cid]=[];if(r.data)DB.evolt[cid].push(r.data);closeM();});}
