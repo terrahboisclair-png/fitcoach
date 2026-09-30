@@ -210,8 +210,8 @@ function trainerApp(){
 }
 function clientApp(cl){var inner=S.tab==='home'||!S.tab?'<div class="con">'+clientLanding(cl)+'</div>':cDetail(cl,false);return '<div class="app"><div class="bar"><div class="logo">FUELWELL<span>360</span></div><div style="flex:1"></div>'+(S.tab&&S.tab!=='home'?'<button onclick="setT(\'home\')" style="padding:6px 14px;font-size:13px;font-family:var(--fb);font-weight:600;border:none;background:rgba(255,255,255,0.15);color:white;border-radius:8px;cursor:pointer;">&#8592; Home</button>':'')+'</div><div class="main">'+inner+'</div>'+(S.modal?rModal():'')+' </div>';}
 function cDetail(cl,isTr){
-  var isWalkOnly=cl.goal==='Walking Only';var tabs=isTr?["workouts","nutrition","evolt","strength","assess","walk","notes","access"]:(isWalkOnly?["walk"]:["workouts","nutrition","evolt","strength","assess","walk","notes","goals"]);
-  var labels={workouts:"Workouts",nutrition:"Nutrition",evolt:"Body Metrics",strength:"Strength",assess:"Assessment",walk:"Walk",notes:"Notes",access:"Client Link",goals:"Goal Setting"};
+  var isWalkOnly=cl.goal==='Walking Only';var tabs=isTr?["workouts","wellness","evolt","strength","assess","walk","access"]:(isWalkOnly?["walk"]:["workouts","wellness","evolt","strength","assess","walk"]);
+  var labels={workouts:"Workouts",wellness:"Wellness",evolt:"Body Metrics",strength:"Strength",assess:"Assessment",walk:"Walk",access:"Client Link"};
   var logs=DB.logs[cl.id]||{};
   var total=Object.values(logs).reduce(function(a,v){return a+v.length;},0);
   var tbHtml='<div class="tabs">';
@@ -234,13 +234,11 @@ function clientLanding(cl){
 
   var pages=[
     {tab:'workouts',icon:'&#127947;',label:'Workouts',sub:'Log your training',cls:'c1'},
-    {tab:'nutrition',icon:'&#129367;',label:'Nutrition',sub:'Track your food',cls:'c2'},
+    {tab:'wellness',icon:'&#127803;',label:'Wellness',sub:'Nutrition, notes & goals',cls:'c2'},
     {tab:'evolt',icon:'&#128202;',label:'Body Metrics',sub:'Body composition',cls:'c3'},
     {tab:'strength',icon:'&#128170;',label:'Strength',sub:'Weight progression',cls:'c4'},
-    {tab:'assess',icon:'&#127937;',label:'Assessment',sub:'Performance tests',cls:'c5'},
-    {tab:'walk',icon:'&#128694;',label:'Walk',sub:'Step challenge',cls:'c6'},
-    {tab:'notes',icon:'&#128221;',label:'Notes',sub:'Messages',cls:'c7'},
-    {tab:'goals',icon:'&#127919;',label:'Goal Setting',sub:'Your journey',cls:'c8'}
+    {tab:'assess',icon:'&#127937;',label:'Assessment',sub:'Non-Scale Victories',cls:'c5'},
+    {tab:'walk',icon:'&#128694;',label:'Walk',sub:'Step challenge',cls:'c6'}
   ];
   var html='<div class="landing">';
   html+='<div class="landing-welcome"><div class="landing-name">Hi, '+ini(cl.name)+'! &#128075;</div><div style="font-family:var(--fd);font-size:20px;letter-spacing:1px;color:var(--t);margin-bottom:4px;">'+cl.name.split(' ')[0]+'</div><div class="landing-sub">What would you like to work on today?</div></div>';
@@ -293,6 +291,7 @@ function rTab(cl,isTr){
     var wwSorted=ww.slice().sort(function(a,b){return (b.pinned?1:0)-(a.pinned?1:0);});
     return wwSorted.map(function(w){return wCard(w,logs,cl.id,isTr);}).join('');
   }
+  if(S.tab==="wellness"){return wellnessPanel(cl.id,isTr);}
   if(S.tab==="nutrition"){return nutPanel(cl.id,DB.nutrition[cl.id]||[]);}
   if(S.tab==="evolt"){return '<div class="card">'+ePanel(cl.id,evolt)+'</div>';}
   if(S.tab==="strength"){
@@ -406,8 +405,8 @@ function monthDays(y,m){var days=[];var d=new Date(y,m,1);while(d.getMonth()===m
 function wmIsCurrent(){var now=curYM();return S.wm.y===now.y&&S.wm.m===now.m;}
 function wmDays(){var days=monthDays(S.wm.y,S.wm.m);if(wmIsCurrent()){var t=td();days=days.filter(function(d){return d<=t;});}return days;}
 function wmLabel(){var names=["January","February","March","April","May","June","July","August","September","October","November","December"];return names[S.wm.m]+" "+S.wm.y;}
-function wmPrev(){S.wm=prevYM(S.wm.y,S.wm.m);render();}
-function wmNext(){if(wmIsCurrent())return;S.wm.m++;if(S.wm.m>11){S.wm.m=0;S.wm.y++;}render();}
+function wmPrev(){S.wm=prevYM(S.wm.y,S.wm.m);S.walkSelDay=null;render();}
+function wmNext(){if(wmIsCurrent())return;S.wm.m++;if(S.wm.m>11){S.wm.m=0;S.wm.y++;}S.walkSelDay=null;render();}
 function wmTotal(days,log){return days.reduce(function(s,d){return s+(log[d]||0);},0);}
 function wmDaysLogged(days,log){return days.filter(function(d){return !!log[d];}).length;}
 function wmAvg(days,log){var dl=wmDaysLogged(days,log);return dl?Math.round(wmTotal(days,log)/dl):0;}
@@ -676,7 +675,47 @@ function wPanel(cid,isTr){
   var total=wmTotal(days,log),logged=wmDaysLogged(days,log),avg=wmAvg(days,log);
   var prev=prevYM(S.wm.y,S.wm.m);
   var prevTotal=wmTotal(monthDays(prev.y,prev.m),log);
-  var html='<div class="card"><div class="ch"><div class="st">&#128694; Your Month</div>'+(isTr?'':'<button class="btn bg bs" onclick="doWalkOptIn(\''+cid+'\',false)">Leave Challenge</button>')+'</div>'+wmNavHtml()+wmTrail(days,log)+'<div class="sg" style="margin-top:16px"><div class="sc"><div class="sv">'+total.toLocaleString()+'</div><div class="sl">Total Steps</div></div><div class="sc"><div class="sv">'+logged+'/'+days.length+'</div><div class="sl">Days Logged</div></div><div class="sc"><div class="sv">'+avg.toLocaleString()+'</div><div class="sl">Daily Avg</div></div></div><div style="margin-top:12px">'+wmDeltaHtml(total,prevTotal)+'</div>'+(isTr?'':'<div style="display:flex;gap:8px;margin-top:16px"><input class="fi" id="wkdate" type="date" value="'+td()+'" max="'+td()+'" style="width:150px"><input class="fi" id="wksteps" type="number" placeholder="Steps" style="flex:1"><button class="btn bp" onclick="doWalkLog(\''+cid+'\')">Log Steps</button></div>')+'</div>';
+  var today=td();
+  // Build interactive day grid for clients
+  var dayGrid='';
+  if(!isTr){
+    var names=["S","M","T","W","T","F","S"];
+    var firstDay=new Date(S.wm.y,S.wm.m,1).getDay();
+    dayGrid='<div style="margin-top:16px;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:8px;">Tap a day to log or edit steps</div>';
+    dayGrid+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">';
+    names.forEach(function(n){dayGrid+='<div style="text-align:center;font-size:10px;font-weight:700;color:var(--t3);padding:2px 0;">'+n+'</div>';});
+    dayGrid+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">';
+    for(var pad=0;pad<firstDay;pad++){dayGrid+='<div></div>';}
+    days.forEach(function(d){
+      var hasSteps=!!log[d];
+      var isToday=d===today;
+      var isSelected=S.walkSelDay===d;
+      var bg=isSelected?'var(--acc)':(hasSteps?'var(--dk)':'var(--sur2)');
+      var color=isSelected?'var(--dk)':(hasSteps?'var(--acc)':'var(--t3)');
+      var label=new Date(d+'T12:00:00').getDate();
+      dayGrid+='<div onclick="walkSelectDay(\''+cid+'\',\''+d+'\')" title="'+d+(hasSteps?' — '+log[d].toLocaleString()+' steps':'')+(isToday?' (Today)':'')+'" style="cursor:pointer;border-radius:8px;background:'+bg+';color:'+color+';text-align:center;padding:6px 2px;font-size:13px;font-weight:'+(isToday?'700':'500')+';border:2px solid '+(isToday?(isSelected?'var(--dk)':'var(--acc)'):'transparent')+';transition:all 0.15s;">';
+      dayGrid+=label;
+      if(hasSteps)dayGrid+='<div style="font-size:8px;opacity:0.85;margin-top:1px;">✓</div>';
+      dayGrid+='</div>';
+    });
+    dayGrid+='</div></div>';
+    // Log form — shown below grid
+    var selDay=S.walkSelDay||today;
+    var existingSteps=log[selDay]||'';
+    var selDate=new Date(selDay+'T12:00:00');
+    var dayNames=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    var monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    var selLabel=(selDay===today?'Today · ':'')+dayNames[selDate.getDay()]+', '+monthNames[selDate.getMonth()]+' '+selDate.getDate();
+    dayGrid+='<div style="margin-top:16px;background:var(--sur2);border-radius:var(--rs);padding:14px;">';
+    dayGrid+='<div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:10px;">📅 '+selLabel+'</div>';
+    dayGrid+='<div style="display:flex;gap:8px;align-items:center;">';
+    dayGrid+='<input class="fi" id="wksteps" type="number" placeholder="Steps today" value="'+existingSteps+'" style="flex:1;font-size:16px;padding:10px 12px;">';
+    dayGrid+='<button class="btn bp" onclick="doWalkLog(\''+cid+'\')" style="white-space:nowrap;">'+(existingSteps?'Update ✓':'Log Steps')+'</button>';
+    dayGrid+='</div>';
+    if(existingSteps)dayGrid+='<div style="font-size:12px;color:var(--t3);margin-top:8px;">Currently saved: <strong style="color:var(--t);">'+existingSteps.toLocaleString()+' steps</strong> — edit above and tap Update to change.</div>';
+    dayGrid+='</div>';
+  }
+  var html='<div class="card"><div class="ch"><div class="st">&#128694; Your Month</div>'+(isTr?'':'<button class="btn bg bs" onclick="doWalkOptIn(\''+cid+'\',false)">Leave Challenge</button>')+'</div>'+wmNavHtml()+wmTrail(days,log)+'<div class="sg" style="margin-top:16px"><div class="sc"><div class="sv">'+total.toLocaleString()+'</div><div class="sl">Total Steps</div></div><div class="sc"><div class="sv">'+logged+'/'+days.length+'</div><div class="sl">Days Logged</div></div><div class="sc"><div class="sv">'+avg.toLocaleString()+'</div><div class="sl">Daily Avg</div></div></div><div style="margin-top:12px">'+wmDeltaHtml(total,prevTotal)+'</div>'+dayGrid+'</div>';
   if(!isTr){
     var ranked=DB.clients.filter(function(c){return !!DB.walkOptins[c.id];}).map(function(c){var clog=DB.walkLogs[c.id]||{};return{id:c.id,name:c.name,total:wmTotal(days,clog)};}).sort(function(a,b){return b.total-a.total;});
     html+='<div class="card"><div class="st">Leaderboard</div><p style="font-size:12px;color:var(--t3);margin-bottom:12px">'+wmLabel()+'</p>'+ranked.map(function(c,i){return '<div class="wkrow'+(c.id===cid?' me':'')+'"><span style="font-family:var(--fd);font-size:16px;color:var(--t3);width:22px">'+(i+1)+'</span><span class="wkn">'+c.name+(c.id===cid?' (you)':'')+'</span><span class="wkt">'+c.total.toLocaleString()+'</span></div>';}).join('')+'</div>';
@@ -701,7 +740,8 @@ function wkBoard(){
   return '<div class="con"><div class="card"><div class="st">&#128694; Team Walk Engagement</div>'+wmNavHtml()+'<p style="font-size:13px;color:var(--t2);margin-bottom:16px">'+optedCount+' of '+rows.length+' clients opted in, '+activeCount+' logged at least once this month</p>'+body+'</div></div>';
 }
 function doWalkOptIn(cid,val){sb.from("walk_optins").upsert({client_id:cid,opted_in:val,updated_at:new Date().toISOString()}).then(function(r){if(r.error){alert(r.error.message);return;}DB.walkOptins[cid]=val;render();});}
-function doWalkLog(cid){var stepsEl=document.getElementById("wksteps");var dateEl=document.getElementById("wkdate");if(!stepsEl)return;var v=parseInt(stepsEl.value,10);if(!v||v<=0)return;var d=dateEl&&dateEl.value?dateEl.value:td();if(d>td())return;sb.from("walk_logs").upsert({client_id:cid,log_date:d,steps:v}).then(function(r){if(r.error){alert(r.error.message);return;}if(!DB.walkLogs[cid])DB.walkLogs[cid]={};DB.walkLogs[cid][d]=v;render();});}
+function walkSelectDay(cid,d){S.walkSelDay=d;render();}
+function doWalkLog(cid){var stepsEl=document.getElementById("wksteps");if(!stepsEl)return;var v=parseInt(stepsEl.value,10);if(!v||v<=0){alert("Please enter a step count.");return;}var d=S.walkSelDay||td();if(d>td()){alert("Can't log steps for a future date.");return;}sb.from("walk_logs").upsert({client_id:cid,log_date:d,steps:v}).then(function(r){if(r.error){alert(r.error.message);return;}if(!DB.walkLogs[cid])DB.walkLogs[cid]={};DB.walkLogs[cid][d]=v;render();});}
 function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
 function fmtN(ts){var d=new Date(ts);return d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})+" at "+d.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"});}
 function nEntry(n,cid){
@@ -736,6 +776,26 @@ function delNote(id,cid){
     DB.notes[cid]=(DB.notes[cid]||[]).filter(function(n){return n.id!==id;});
     render();
   });
+}
+function wellnessPanel(cid,isTr){
+  var html='';
+  // Goals section — client only (trainer sees goals in the hero summary above tabs)
+  if(!isTr){
+    html+='<div style="margin-bottom:8px;font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);padding-left:4px;">&#127919; Goals</div>';
+    html+=gPanel(cid);
+    html+='<div style="height:24px;"></div>';
+  }
+  // Nutrition section
+  html+='<div style="margin-bottom:8px;font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);padding-left:4px;">&#127803; Nutrition</div>';
+  html+=nutPanel(cid,DB.nutrition[cid]||[]);
+  html+='<div style="height:24px;"></div>';
+  // Notes section
+  html+='<div style="margin-bottom:8px;font-family:var(--fd);font-size:13px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);padding-left:4px;">&#128221; Notes</div>';
+  html+=nPanel(cid,isTr);
+  html+='<div style="height:24px;"></div>';
+  // Blog link
+  html+='<a href="https://fuelwell360.blogspot.com/" target="_blank" style="text-decoration:none;display:block;"><div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:linear-gradient(135deg,#F5F0E8,#EDE5D5);border-color:#DDD5C0;"><div><div style="font-size:15px;font-weight:600;color:var(--t);">&#128221; Terrah\'s Wellness Blog</div><div style="font-size:13px;color:var(--t3);margin-top:2px;">Tips, recipes & healthy living inspiration</div></div><span style="padding:8px 16px;border-radius:var(--rs);background:var(--acc);color:var(--dk);font-family:var(--fb);font-size:13px;font-weight:700;">Read Now &#8594;</span></div></a>';
+  return html;
 }
 function gQuestion(text,fn,cid){
   return '<div class="card"><div class="st">'+text+'</div><div style="display:flex;gap:10px"><button class="btn bp" style="flex:1;justify-content:center" onclick="'+fn+'(\''+cid+'\',true)">Yes</button><button class="btn bg" style="flex:1;justify-content:center" onclick="'+fn+'(\''+cid+'\',false)">Not yet</button></div></div>';
