@@ -342,7 +342,7 @@ function wCard(w,logs,cid,isTr){
     var playBtn=ex.url?'<a href="'+ex.url+'" target="_blank" class="pb" title="Watch demo">&#9654;</a>':'';
     var cueHtml=ex.cue?'<div style="font-size:11px;color:var(--t3);font-style:italic;margin-top:2px;line-height:1.3">'+esc(ex.cue)+'</div>':'';
     var nameCell='<div><span class="en">'+ex.name+playBtn+'</span>'+cueHtml+'</div>';
-    var act=isTr?'<span style="text-align:center;color:var(--t3);font-size:12px">-</span>':'<input class="li'+(tl&&tl.data&&tl.data[i+"_a"]?' ok':'')+'" data-wid="'+w.id+'" data-idx="'+i+'" placeholder="lbs x reps" value="'+(tl&&tl.data&&tl.data[i+"_a"]?tl.data[i+"_a"]:'')+'">';
+    var act='<input class="li'+(tl&&tl.data&&tl.data[i+"_a"]?' ok':'')+'" data-wid="'+w.id+'" data-idx="'+i+'" placeholder="lbs x reps" value="'+(tl&&tl.data&&tl.data[i+"_a"]?tl.data[i+"_a"]:'')+'">';
     var lastLogs=(logs[w.id]||[]).filter(function(l){return l.date!==td()&&l.data&&l.data[i+'_a'];});var lastVal=lastLogs.length?lastLogs[lastLogs.length-1].data[i+'_a']:'-';var lastCell='<span style="text-align:center;font-size:12px;color:var(--t3);">'+lastVal+'</span>';return '<div class="er">'+nameCell+'<span style="text-align:center;color:var(--t2)">'+ex.sets+'</span><span style="text-align:center;color:var(--t2)">'+ex.reps+'</span><span style="text-align:center;color:var(--t2)">'+ex.weight+'</span>'+lastCell+act+'</div>';
   }).join('');
   var past='';
@@ -351,9 +351,16 @@ function wCard(w,logs,cid,isTr){
     past='<div style="padding:12px 16px;background:var(--bg);border-top:1px solid var(--bdr)"><div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:8px">Recent Sessions</div>'+pr+'</div>';
   }
   var pinBtn=isTr?'<button class="btn bg bs pin-btn'+(w.pinned?' pinned':'')+'" onclick="doPin(\''+w.id+'\',\''+cid+'\','+(!w.pinned)+')" title="'+(w.pinned?'Unpin workout':'Pin to top')+'">'+(w.pinned?'&#128204; Pinned':'&#128204; Pin')+'</button>':'';
-  var btns=isTr?pinBtn+'<button class="btn bg bs" onclick="openM(\'editWorkout\',\''+cid+'\',\''+w.id+'\')">Edit</button><button class="btn bg bs dr" onclick="delW(\''+w.id+'\',\''+cid+'\')">Delete</button>':'<button class="btn bp bs" onclick="logS(\''+cid+'\',\''+w.id+'\')">&#127947; Record Workout</button>';
+  var editDeleteBtns=isTr?'<button class="btn bg bs" onclick="openM(\'editWorkout\',\''+cid+'\',\''+w.id+'\')">Edit</button><button class="btn bg bs dr" onclick="delW(\''+w.id+'\',\''+cid+'\')">Delete</button>':'';
+  var btns=isTr?pinBtn+editDeleteBtns:'';
   var pinnedBadge=w.pinned?'<div class="pinned-banner">&#128204; Pinned — Always shown at top</div>':'';
-  return '<div class="wc'+(w.pinned?' wc-pinned':'')+'">'+(w.pinned?pinnedBadge:'')+'<div class="wh"><div><div class="wt">'+w.name+'</div><div class="wm">'+(w.day||'')+' &middot; '+(w.exercises||[]).length+' exercises</div></div><div style="display:flex;gap:8px;align-items:center;"><span id="sv'+w.id+'" class="tag tg hide">&#127881; Great work today!</span>'+btns+'</div></div><div class="er hdr"><span>Exercise</span><span>Sets</span><span>Reps</span><span>Last Used</span><span>Today</span></div>'+exes+past+'</div>';
+  var logBar='<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--sur2);border-top:1px solid var(--bdr);flex-wrap:wrap;">'+
+    '<label style="font-size:12px;font-weight:600;color:var(--t2);white-space:nowrap;">Session Date:</label>'+
+    '<input type="date" id="ld_'+w.id+'" class="fi" value="'+td()+'" style="width:160px;font-size:13px;">'+
+    '<button class="btn bp bs" onclick="logS(\''+cid+'\',\''+w.id+'\')">&#127947; '+(isTr?'Log Session':'Record Workout')+'</button>'+
+    '<span id="sv'+w.id+'" class="tag tg hide">&#127881; '+(isTr?'Session saved!':'Great work today!')+'</span>'+
+  '</div>';
+  return '<div class="wc'+(w.pinned?' wc-pinned':'')+'">'+(w.pinned?pinnedBadge:'')+'<div class="wh"><div><div class="wt">'+w.name+'</div><div class="wm">'+(w.day||'')+' &middot; '+(w.exercises||[]).length+' exercises</div></div><div style="display:flex;gap:8px;align-items:center;">'+btns+'</div></div><div class="er hdr"><span>Exercise</span><span>Sets</span><span>Reps</span><span>Last Used</span><span>Actual</span></div>'+exes+logBar+past+'</div>';
 }
 function ePanel(cid,entries){
   var latest=entries[entries.length-1],prev=entries[entries.length-2];
@@ -513,6 +520,7 @@ function aPanel(cid,isTr){
     {key:"elliptical_calories",label:"Lateral Elliptical — Calories",unit:"cal",cat:"Cardio"},
     {key:"pushups",label:"1 Minute Pushups",unit:"reps",cat:"Endurance"},
     {key:"squats",label:"1 Minute Squats",unit:"reps",cat:"Endurance"},
+    {key:"pullups",label:"1 Minute Pull-Ups",unit:"reps",cat:"Endurance"},
     {key:"squat_lb",label:"Squat",unit:"lbs",cat:"Strength"},
     {key:"bench_lb",label:"Bench",unit:"lbs",cat:"Strength"},
     {key:"deadlift_lb",label:"Deadlift",unit:"lbs",cat:"Strength"},
@@ -655,7 +663,7 @@ function runCalc(){
   document.getElementById('calc_result').style.display='block';
 }
 function doSaveAssess(cid){
-  var fields=["step_test","jumping_jacks","mile_run","row_500","row_resistance","elliptical_resistance","elliptical_duration","elliptical_calories","pushups","squats","squat_lb","bench_lb","deadlift_lb","ohp_lb"];
+  var fields=["step_test","jumping_jacks","mile_run","row_500","row_resistance","elliptical_resistance","elliptical_duration","elliptical_calories","pushups","squats","pullups","squat_lb","bench_lb","deadlift_lb","ohp_lb"];
   var entry={client_id:cid,date:document.getElementById("af_date").value};
   fields.forEach(function(f){var el=document.getElementById("af_"+f);if(el&&el.value.trim())entry[f]=el.value.trim();});
   sb.from("assessments").insert(entry).select().single().then(function(r){
@@ -866,7 +874,7 @@ function hasUnreadNote(cid){if(S.seenNotes&&S.seenNotes[cid])return false;var no
 function openM(type,cid,wid){S.modal={type:type,cid:cid,wid:wid};render();}
 function closeM(){S.modal=null;render();}
 function doAC(){var name=document.getElementById("mn").value.trim();if(!name)return;sb.from("clients").insert({name:name,email:document.getElementById("me").value,goal:document.getElementById("mg").value,token:tok(name)}).select().single().then(function(r){if(r.error){alert(r.error.message);return;}DB.clients.push(r.data);S.sel=r.data.id;closeM();});}
-function logS(cid,wid){var data={};document.querySelectorAll('input[data-wid="'+wid+'"]').forEach(function(el){if(el.value)data[el.dataset.idx+"_a"]=el.value;});var tday=td();var existing=(DB.logs[cid]&&DB.logs[cid][wid]||[]).find(function(l){return l.date===tday;});var p=existing?sb.from("logs").update({data:data}).eq("id",existing.id).then(function(){existing.data=data;}):sb.from("logs").insert({client_id:cid,workout_id:wid,date:tday,data:data}).select().single().then(function(r){if(!DB.logs[cid])DB.logs[cid]={};if(!DB.logs[cid][wid])DB.logs[cid][wid]=[];if(r.data)DB.logs[cid][wid].push(r.data);});p.then(function(){var b=document.getElementById("sv"+wid);if(b){b.classList.remove("hide");setTimeout(function(){b.classList.add("hide");},2500);}});}
+function logS(cid,wid){var data={};document.querySelectorAll('input[data-wid="'+wid+'"]').forEach(function(el){if(el.value)data[el.dataset.idx+"_a"]=el.value;});var dateEl=document.getElementById("ld_"+wid);var logDate=dateEl&&dateEl.value?dateEl.value:td();var existing=(DB.logs[cid]&&DB.logs[cid][wid]||[]).find(function(l){return l.date===logDate;});var p=existing?sb.from("logs").update({data:data}).eq("id",existing.id).then(function(){existing.data=data;}):sb.from("logs").insert({client_id:cid,workout_id:wid,date:logDate,data:data}).select().single().then(function(r){if(!DB.logs[cid])DB.logs[cid]={};if(!DB.logs[cid][wid])DB.logs[cid][wid]=[];if(r.data)DB.logs[cid][wid].push(r.data);});p.then(function(){var b=document.getElementById("sv"+wid);if(b){b.classList.remove("hide");setTimeout(function(){b.classList.add("hide");},2500);}});}
 function doSW(cid,eid){
   var name=document.getElementById("wn").value.trim();
   if(!name){alert("Please enter a workout name.");return;}
