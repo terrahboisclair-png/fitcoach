@@ -159,7 +159,7 @@ var SB_KEY="sb_publishable_KK-9Sj1ktTcTPQ3VNl_FRQ_-Mriqax-";
 var sb=supabase.createClient(SB_URL,SB_KEY);
 var params=new URLSearchParams(location.search);
 var CT=params.get("client");
-var S={view:"trainer",sel:null,tab:CT?"home":"workouts",modal:null,wm:curYM(),goal:{step:"intro",behavior:"",stageId:null,draft:{specific:"",measurable:"",timeframe:"",motivation:""}}};
+var S={view:"trainer",sel:null,tab:CT?"home":"progress",modal:null,wm:curYM(),goal:{step:"intro",behavior:"",stageId:null,draft:{specific:"",measurable:"",timeframe:"",motivation:""}}};
 var DB={clients:[],workouts:{},logs:{},evolt:{},walkOptins:{},walkLogs:{},notes:{},checkins:{},assessments:{},nutrition:{}};
 var STAGES={
   precontemplation:{order:1,name:"Precontemplation",color:"#8FA8FF",bg:"rgba(143,168,255,0.15)",definition:"Not currently doing the behavior and no intention of starting in the next 6 months. May be unaware of the need to change or discouraged by a past attempt.",strategies:["Share info gently, no pressure to act yet","Help them connect emotionally to what's at stake","Explore how this affects people or things they care about"]},
@@ -210,8 +210,8 @@ function trainerApp(){
 }
 function clientApp(cl){var inner=S.tab==='home'||!S.tab?'<div class="con">'+clientLanding(cl)+'</div>':cDetail(cl,false);return '<div class="app"><div class="bar"><div class="logo">FUELWELL<span>360</span></div><div style="flex:1"></div>'+(S.tab&&S.tab!=='home'?'<button onclick="setT(\'home\')" style="padding:6px 14px;font-size:13px;font-family:var(--fb);font-weight:600;border:none;background:rgba(255,255,255,0.15);color:white;border-radius:8px;cursor:pointer;">&#8592; Home</button>':'')+'</div><div class="main">'+inner+'</div>'+(S.modal?rModal():'')+' </div>';}
 function cDetail(cl,isTr){
-  var isWalkOnly=cl.goal==='Walking Only';var tabs=isTr?["workouts","wellness","evolt","strength","assess","walk","access"]:(isWalkOnly?["walk"]:["workouts","wellness","evolt","strength","assess","walk"]);
-  var labels={workouts:"Workouts",wellness:"Wellness",evolt:"Body Metrics",strength:"Strength",assess:"Assessment",walk:"Walk",access:"Client Link"};
+  var isWalkOnly=cl.goal==='Walking Only';var tabs=isTr?["progress","wellness","evolt","assess","walk","access"]:(isWalkOnly?["walk"]:["progress","wellness","evolt","assess","walk"]);
+  var labels={progress:"Progress",wellness:"Wellness",evolt:"Body Metrics",assess:"Assessment",walk:"Walk",access:"Client Link"};
   var logs=DB.logs[cl.id]||{};
   var total=Object.values(logs).reduce(function(a,v){return a+v.length;},0);
   var tbHtml='<div class="tabs">';
@@ -233,10 +233,9 @@ function clientLanding(cl){
   }
 
   var pages=[
-    {tab:'workouts',icon:'&#127947;',label:'Workouts',sub:'Log your training',cls:'c1'},
+    {tab:'progress',icon:'&#128200;',label:'Progress',sub:'Log & track your gains',cls:'c1'},
     {tab:'wellness',icon:'&#127803;',label:'Wellness',sub:'Nutrition, notes & goals',cls:'c2'},
     {tab:'evolt',icon:'&#128202;',label:'Body Metrics',sub:'Body composition',cls:'c3'},
-    {tab:'strength',icon:'&#128170;',label:'Strength',sub:'Weight progression',cls:'c4'},
     {tab:'assess',icon:'&#127937;',label:'Assessment',sub:'Non-Scale Victories',cls:'c5'},
     {tab:'walk',icon:'&#128694;',label:'Walk',sub:'Step challenge',cls:'c6'}
   ];
@@ -286,44 +285,54 @@ function rTab(cl,isTr){
   var ww=DB.workouts[cl.id]||[];
   var logs=DB.logs[cl.id]||{};
   var evolt=DB.evolt[cl.id]||[];
-  if(S.tab==="workouts"){
+  if(S.tab==="progress"){
     if(!ww.length){return '<div class="emp"><div class="ei">&#127947;</div><div class="et">No Workouts Yet</div><div class="es">'+(isTr?'Build the first workout plan.':'Ready to get started! Your trainer will add your workouts here soon.')+'</div>'+(isTr?'<br><button class="btn bp" style="margin-top:16px" onclick="openM(\'addWorkout\',\''+cl.id+'\')">+ Create Workout</button>':'')+'</div>';}
     var wwSorted=ww.slice().sort(function(a,b){return (b.pinned?1:0)-(a.pinned?1:0);});
-    return wwSorted.map(function(w){return wCard(w,logs,cl.id,isTr);}).join('');
+    var out='';
+    wwSorted.forEach(function(w){
+      out+=wCard(w,logs,cl.id,isTr);
+      // Week 1 vs Latest progression panel per workout
+      var wLogs=(logs[w.id]||[]).slice().sort(function(a,b){return a.date<b.date?-1:1;});
+      if(wLogs.length>=2){
+        var first=wLogs[0];
+        var latest=wLogs[wLogs.length-1];
+        var progRows='';
+        (w.exercises||[]).forEach(function(ex,i){
+          var fv=first.data&&first.data[i+'_a']?first.data[i+'_a']:null;
+          var lv=latest.data&&latest.data[i+'_a']?latest.data[i+'_a']:null;
+          if(!fv&&!lv)return;
+          var arrow='',arrowColor='var(--t3)',diff='';
+          if(fv&&lv&&fv!==lv){
+            var fn=parseFloat(fv),ln=parseFloat(lv);
+            if(!isNaN(fn)&&!isNaN(ln)){
+              var d=ln-fn;
+              arrow=d>0?' &#8679;':' &#8681;';
+              arrowColor=d>0?'var(--grn)':'var(--red)';
+              diff=' <span style="font-size:11px;color:'+arrowColor+';font-weight:700;">'+(d>0?'+':'')+d.toFixed(1)+'</span>';
+            } else {arrow=' &#8594;';arrowColor='var(--t3)';}
+          } else if(fv&&lv&&fv===lv){arrow=' &#8594;';arrowColor='var(--t3)';}
+          progRows+='<div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--bdr);font-size:13px;">'+
+            '<span style="font-weight:600;color:var(--t);">'+ex.name+'</span>'+
+            '<span style="color:var(--t3);font-size:12px;white-space:nowrap;"><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--t3);margin-right:3px;">Baseline</span><span style="color:var(--t2);">'+(fv||'—')+'</span> <span style="color:var(--t3);margin:0 4px;">&#8594;</span> <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--t3);margin-right:3px;">Retest</span><span style="color:var(--acc);font-weight:700;">'+(lv||'—')+'</span>'+diff+'</span>'+
+            '<span style="font-size:16px;color:'+arrowColor+';">'+arrow+'</span>'+
+          '</div>';
+        });
+        if(progRows){
+          out+='<div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);overflow:hidden;margin-top:-12px;margin-bottom:12px;">'+
+            '<div style="background:var(--sur2);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bdr);">'+
+              '<span style="font-family:var(--fd);font-size:15px;letter-spacing:1px;color:var(--dk);">&#128200; Baseline vs Retest</span>'+
+              '<span style="font-size:11px;color:var(--t3);font-weight:600;">'+first.date+' &rarr; '+latest.date+'</span>'+
+            '</div>'+
+            '<div style="padding:4px 16px 8px;">'+progRows+'</div>'+
+          '</div>';
+        }
+      }
+    });
+    return out;
   }
   if(S.tab==="wellness"){return wellnessPanel(cl.id,isTr);}
   if(S.tab==="nutrition"){return nutPanel(cl.id,DB.nutrition[cl.id]||[]);}
   if(S.tab==="evolt"){return '<div class="card">'+ePanel(cl.id,evolt)+'</div>';}
-  if(S.tab==="strength"){
-    var exMap={};
-    ww.forEach(function(w){
-      (logs[w.id]||[]).forEach(function(entry){
-        Object.entries(entry.data||{}).filter(function(p){return p[0].endsWith('_a');}).forEach(function(p){
-          var idx=parseInt(p[0]);
-          var exName=w.exercises[idx]?w.exercises[idx].name:null;
-          if(!exName||!p[1])return;
-          if(!exMap[exName])exMap[exName]=[];
-          exMap[exName].push({date:entry.date,val:p[1]});
-        });
-      });
-    });
-    var exNames=Object.keys(exMap).sort();
-    if(!exNames.length)return '<div class="emp"><div class="ei">&#128170;</div><div class="et">No Strength Data Yet</div><div class="es">Log some sessions first to see weight progression here.</div></div>';
-    var allDates=[...new Set(exNames.reduce(function(a,n){return a.concat(exMap[n].map(function(e){return e.date;}));},[])) ].sort();
-    var rows='';
-    exNames.forEach(function(name,ri){
-      var bg=ri%2===0?'var(--sur)':'var(--sur2)';
-      var cells='';
-      allDates.forEach(function(d){
-        var entry=exMap[name].find(function(e){return e.date===d;});
-        cells+='<td style="padding:8px 12px;text-align:center;background:'+bg+';color:'+(entry?'var(--t)':'var(--t3)')+';">'+(entry?entry.val:'-')+'</td>';
-      });
-      rows+='<tr><td style="padding:8px 12px;font-weight:600;background:'+bg+';border-right:1px solid var(--bdr);">'+name+'</td>'+cells+'</tr>';
-    });
-    var hdrs='<th style="text-align:left;padding:8px 12px;background:var(--dk);color:var(--acc);font-family:var(--fd);letter-spacing:1px;">Exercise</th>';
-    allDates.forEach(function(d){hdrs+='<th style="padding:8px 12px;background:var(--dk);color:white;font-size:11px;font-weight:600;white-space:nowrap;text-align:center;">'+d+'</th>';});
-    return '<div class="card"><div class="ct" style="margin-bottom:16px">&#128170; Strength Tracker</div><div style="overflow-x:auto;border-radius:var(--r);border:1px solid var(--bdr);"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr>'+hdrs+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
-  }
   if(S.tab==="assess"){return aPanel(cl.id,isTr);}
   if(S.tab==="walk"){return wPanel(cl.id,isTr);}
   if(S.tab==="notes"){return nPanel(cl.id,isTr);}
@@ -869,7 +878,7 @@ function gSubmit(cid){
 }
 function setV(v){S.view=v;render();}
 function setT(t){S.tab=t;if(t==="notes"&&S.sel){if(!S.seenNotes)S.seenNotes={};S.seenNotes[S.sel]=true;}render();}
-function selC(id){S.sel=id;S.tab="workouts";render();}
+function selC(id){S.sel=id;S.tab="progress";render();}
 function hasUnreadNote(cid){if(S.seenNotes&&S.seenNotes[cid])return false;var notes=DB.notes[cid]||[];return notes.some(function(n){return n.author==="client";});}
 function openM(type,cid,wid){S.modal={type:type,cid:cid,wid:wid};render();}
 function closeM(){S.modal=null;render();}
